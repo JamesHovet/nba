@@ -10,16 +10,31 @@ var svg = d3.select("svg");
 var detachedContainer = document.createElement("custom");
 var dataContainer = d3.select(detachedContainer);
 
-
+var col = {"PLAYER_ID" : 0,
+"TEAM_ID" : 1,
+"PERIOD" : 2,
+"ACTION_TYPE" : 3,
+"SHOT_TYPE" : 4,
+"SHOT_DISTANCE" : 5,
+"LOC_X" : 6,
+"LOC_Y" : 7,
+"SHOT_MADE_FLAG" : 8,
+"SEASON" : 9,
+"TOTAL_REMAINING_IN_GAME" : 10}
 
 svg.append("g")
 
-d3.csv("./compiled.csv").then(ready);
+d3.text("./compiled.csv")
+    .then(ready);
+// d3.csv("./head.csv").then(ready);
 
 function ready(compiled) {
-    console.log(compiled)
+    // compiled = compiled.slice(compiled.indexOf("\n"))
+    compiled = compiled.split("\n")
+    const rows = compiled.map((el) => {return el.split(',').map(d => +d)})
+    console.log(rows)
     var dataBinding = dataContainer.selectAll("custom.rect")
-        .data(compiled);
+        .data(rows)
 
     var scaleX = d3.scaleLinear()
         .range([0, 500])
@@ -32,12 +47,14 @@ function ready(compiled) {
     
     dataBinding.enter()
         .append("custom")
+        .filter((d) => d[col.SEASON] == 2010)
         .classed("rect", true)
-        .attr("x", (d) => scaleX(d.LOC_X))
-        .attr("y", (d) => scaleY(d.LOC_Y))
+        .attr("x", (d) => scaleX(d[col.LOC_X]))
+        .attr("y", (d) => scaleY(d[col.LOC_Y]))
         .attr("size", 1)
         .attr("fillStyle", "red");
     
+    drawCanvas()
 }
 
 function drawCanvas() {
@@ -61,4 +78,4 @@ function drawCanvas() {
     })
   }
   
-  d3.timer(drawCanvas);
+//   d3.timer(drawCanvas);
