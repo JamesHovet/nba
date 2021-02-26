@@ -1,9 +1,14 @@
 var width = 1200;
 var height = 800;
+
 var resolution = 80;
 var boxWidth = (height / resolution)
 var boxMargin = 0.0;
 var boxInnerWidth = boxWidth - 2 * boxMargin;
+
+var histogramPosition = {x : 820, y: 780}
+var histogramSize = {width: 360, height : 250 }
+var histogramBarWidth = histogramSize.width / 35
 
 var sliceSize = 50000;
 
@@ -17,8 +22,9 @@ var svgRaw = d3.select("svg")
 
 var svg = svgRaw.append("g")
 
-var court = svg.append("g").attr("id", "court");
-var progressBar = svg.append("g").attr("id", "progressBar");
+var courtG = svg.append("g").attr("id", "court");
+var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
+var progressBarG = svg.append("g").attr("id", "progressBar");
 
 var detachedContainer = document.createElement("custom");
 var dataContainer = d3.select(detachedContainer);
@@ -45,13 +51,22 @@ const emptyHist = function() {return new Array(35).fill(0);}
 
 var rows = undefined;
 
-var attempts = emptySquares()
-var pts = emptySquares()
-var ratio = emptySquares()
+var attempts = {
+    raster : emptySquares(),
+    hist : emptyHist()
+}
 
-var attemptsHist = emptyHist()
-var ptsHist = emptyHist()
+var pts = {
+    raster : emptySquares(),
+    hist : emptyHist()
+}
 
+var ratio = {
+    raster : emptySquares(),
+    hist : emptyHist()
+}
+
+var chosenStat = attempts;
 
 //----------------------------------------------------------------------------------------------------------------------
 // Utils
@@ -83,11 +98,11 @@ var scaleY = d3.scaleQuantize()
 var scaleHeatmap = d3.scaleQuantile()
     .range(d3.interpolateBlues)
 
-
 distanceBins = d3.bin().domain([0, 35]).thresholds(35)([])
 
+var histY = d3.scaleLinear()
+    .range([0, histogramSize.height])
 
-  
 //----------------------------------------------------------------------------------------------------------------------
 // Parse new data
 //----------------------------------------------------------------------------------------------------------------------
@@ -96,13 +111,14 @@ function processSlice(slice, filter) {
     slice.forEach(d => {
         let x = scaleX(d[col.LOC_X]);
         let y = scaleY(d[col.LOC_Y]);
-        attempts[y][x] += 1;
-        pts[y][x] += d[col.SHOT_MADE_FLAG];
+        attempts.raster[y][x] += 1;
+        pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
         let dist = Math.min(Math.floor(d[col.SHOT_DISTANCE]),34);
-        attemptsHist[dist] += 1;
-        ptsHist[dist] += d[col.SHOT_MADE_FLAG];
+        attempts.hist[dist] += 1;
+        pts.hist[dist] += d[col.SHOT_MADE_FLAG];
     });
-    ratio = ratio.map((row, rowI) => row.map((el, colI) => pts[rowI][colI] / attempts[rowI][colI]))
+    ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => pts.raster[rowI][colI] / attempts.raster[rowI][colI]))
+    ratio.hist = ratio.hist.map((_, i) => pts.hist[i] / attempts.hist[i])
 }
 
 function ready(compiled) {
@@ -144,7 +160,9 @@ function drawLoop(){
 
     drawProgressBar()
 
-    drawCourt(ratio);
+    drawCourt(chosenStat);
+
+    drawHistogram(chosenStat)
     
     requestAnim(drawLoop);
 }
@@ -153,9 +171,10 @@ function drawLoop(){
 // SVG bits
 //----------------------------------------------------------------------------------------------------------------------
 
-function drawCourt(raster) {
+function drawCourt(stat) {
+    let raster = stat.raster;
     scaleHeatmap = d3.scaleSequentialQuantile(raster.flat(), d3.interpolateBlues)
-    court.selectAll("rect")
+    courtG.selectAll("rect")
         .data(raster.flat())
         .join("rect")
         .attr("x", (d, i) => (i % resolution) * boxWidth + boxMargin)
@@ -166,12 +185,26 @@ function drawCourt(raster) {
 
 }
 
+function drawHistogram(stat) {
+    hist = stat.hist;
+    histY = histY.domain(d3.extent(hist))
+    histG.selectAll("rect")
+        .data(hist)
+        .join("rect")
+        .attr("x", (d, i) => i * histogramBarWidth)
+        .attr("y", (d, i) => histogramSize.height - histY(d))
+        .attr("width", histogramBarWidth)
+        .attr("height", (d, i) => histY(d))
+        .attr("fill", "lightblue")
+
+}
+
 function drawProgressBar() {
     if(currentIndex > rows.length) {
-        progressBar.attr("visibility", "hidden")
+        progressBarG.attr("visibility", "hidden")
     } else {
-        progressBar.attr("visibility", "visible")
-        progressBar.selectAll("rect")
+        progressBarG.attr("visibility", "visible")
+        progressBarG.selectAll("rect")
             .data([currentIndex])
             .join("rect")
             .attr("y", height - 5)
