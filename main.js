@@ -6,6 +6,8 @@ var boxWidth = (height / resolution)
 var boxMargin = 0.0;
 var boxInnerWidth = boxWidth - 2 * boxMargin;
 
+var heatmapSize = { width: height, height: height}
+
 var histogramPosition = {x : 820, y: 780}
 var histogramSize = {width: 360, height : 250 }
 var histogramBarWidth = histogramSize.width / 35
@@ -13,8 +15,8 @@ var histogramBarWidth = histogramSize.width / 35
 var sliceSize = 50000;
 
 var chart = d3.select("canvas");
-chart.attr("width", width)
-    .attr("height", height)
+chart.attr("width", heatmapSize.width)
+    .attr("height", heatmapSize.height)
 var context = chart.node().getContext("2d");
 var svgRaw = d3.select("svg")
     .attr("width", width)
@@ -88,12 +90,20 @@ const pyRange = (start, stop, step = 1) =>
 var scaleX = d3.scaleQuantize()
     .domain([-250, 250])
     .range([...Array(resolution).keys()])
+
+var scaleXLinear = d3.scaleLinear()
+    .domain([-250, 250])
+    .range([0, heatmapSize.width])
     // .range(pyRange(0, 800, 10))
 
 var scaleY = d3.scaleQuantize()
     .domain([-50, 450])
     .range([...Array(resolution).keys()])
     // .range(pyRange(0, 800, 10))
+
+var scaleYLinear = d3.scaleLinear()
+    .domain([-50, 450])
+    .range([0, heatmapSize.height])
 
 var scaleHeatmap = d3.scaleQuantile()
     .range(d3.interpolateBlues)
@@ -108,7 +118,14 @@ var histY = d3.scaleLinear()
 //----------------------------------------------------------------------------------------------------------------------
 
 function processSlice(slice, filter) {
+    context.fillStyle = "rgba(255, 0, 0, 0.1)";
     slice.forEach(d => {
+
+        context.beginPath();
+        context.rect(scaleXLinear(d[col.LOC_X]), scaleYLinear(d[col.LOC_Y]), 1, 1);
+        context.fill();
+        context.closePath();
+
         let x = scaleX(d[col.LOC_X]);
         let y = scaleY(d[col.LOC_Y]);
         attempts.raster[y][x] += 1;
@@ -182,6 +199,7 @@ function drawCourt(stat) {
         .attr("width", boxInnerWidth)
         .attr("height", boxInnerWidth)
         .attr("fill", (d) => scaleHeatmap(d))
+        .attr("fill-opacity", (d) => 0.5)
 
 }
 
