@@ -136,8 +136,37 @@ function processSlice(slice, filter) {
         attempts.hist[dist] += 1;
         pts.hist[dist] += d[col.SHOT_MADE_FLAG];
     });
-    ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => pts.raster[rowI][colI] / attempts.raster[rowI][colI]))
+    ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => attempts.raster[rowI][colI] != 0 ? pts.raster[rowI][colI] / attempts.raster[rowI][colI] : 0))
+    blurRatioRaster()
     ratio.hist = ratio.hist.map((_, i) => pts.hist[i] / attempts.hist[i])
+}
+
+const gaussianMatrix5 = [
+    [0.003765,0.015019,0.023792,0.015019,0.003765],
+    [0.015019,0.059912,0.094907,0.059912,0.015019],
+    [0.023792,0.094907,0.150342,0.094907,0.023792],
+    [0.015019,0.059912,0.094907,0.059912,0.015019],
+    [0.003765,0.015019,0.023792,0.015019,0.003765]
+]
+
+function blurRatioRaster() {
+    tmpRaster = emptySquares()
+    const w = 5;
+    let tmp = Array(w * w).fill(0)
+    for(let x = 0; x < resolution; x ++) {
+        for(let y = 0; y < resolution; y++) {
+            let runningTotal = 0;
+            for (let xx = - (w - 1) / 2; xx < (w - 1) / 2; xx++) {
+                for (let yy = - (w - 1) / 2; yy < (w - 1) / 2; yy++) {
+                    let thisGaussian = gaussianMatrix5[2 + xx][2 + yy]
+                    let thisVal = outsideRaster(x + xx, y + yy) ? 0 : ratio.raster[x + xx][y + yy]
+                    runningTotal += thisGaussian * thisVal;
+                }
+            }
+            tmpRaster[x][y] = runningTotal / (w * w)
+        }
+    }
+    ratio.raster = tmpRaster;
 }
 
 function ready(compiled) {
@@ -256,6 +285,17 @@ function drawCanvas() {
 
 
 
+//----------------------------------------------------------------------------------------------------------------------
+// Utils Utils
+//----------------------------------------------------------------------------------------------------------------------
+
+function outsideRaster(x, y) {
+    if (x < 0 || x >= resolution || y < 0 || y >= resolution) {
+        return true
+    } else {
+        return false
+    }
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // start
