@@ -2,16 +2,25 @@
 <html>
 <meta charset="utf-8">
 <style>
-    svg, canvas {
-        position: absolute;
-        top: 10px;        
-        left: 10px;
+    svg, canvas, #bk-svg {
+      opacity: 0;
+      position: absolute;
+      top: 10px;        
+      left: 10px;
+    }
+
+    #initial-loading {
+      position: absolute;
+      top: 400px;
+      left: 500px;
     }
 </style>
 
 <body>
+  <h1 id="initial-loading">Loading 2 Million Shots...</h1>
   <canvas></canvas>
   <svg></svg>
+  <object id="bk-svg" data="Basketball-Court.svg" type="image/svg+xml"></object>
 </body>
 
 <script src="http://d3js.org/d3.v6.min.js"></script>

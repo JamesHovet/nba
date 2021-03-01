@@ -21,6 +21,8 @@ var context = chart.node().getContext("2d");
 var svgRaw = d3.select("svg")
     .attr("width", width)
     .attr("height", height)
+var bkSVG = d3.select("#bk-svg")
+    .attr("width", heatmapSize.width)
 
 var svg = svgRaw.append("g")
 
@@ -118,7 +120,7 @@ var histY = d3.scaleLinear()
 //----------------------------------------------------------------------------------------------------------------------
 
 function processSlice(slice, filter) {
-    context.fillStyle = "rgba(255, 0, 0, 0.1)";
+    context.fillStyle = "rgba(255, 0, 0, 1)";
     slice.forEach(d => {
 
         context.beginPath();
@@ -146,6 +148,10 @@ function ready(compiled) {
     compiled.pop()
     rows = compiled.map((el) => {return el.split(',').map(d => +d)})
     console.log(rows)
+
+    d3.select("#initial-loading").transition().duration(2000).style("opacity", 0)
+    svgRaw.transition().duration(2000).style("opacity", 1)
+    bkSVG.transition().duration(2000).style("opacity", 1)
 
     drawLoop();    
 
@@ -199,7 +205,6 @@ function drawCourt(stat) {
         .attr("width", boxInnerWidth)
         .attr("height", boxInnerWidth)
         .attr("fill", (d) => scaleHeatmap(d))
-        .attr("fill-opacity", (d) => 0.5)
 
 }
 
@@ -239,7 +244,8 @@ function drawProgressBar() {
 //----------------------------------------------------------------------------------------------------------------------
 function clearCanvas() {
     // clear canvas
-    context.fillStyle = "#fff";
+    context.fillStyle = "rgba(255, 255, 255, 0)";
+    // context.fillStyle = "#fff";
     context.rect(0,0,chart.attr("width"),chart.attr("height"));
     context.fill();
 }
