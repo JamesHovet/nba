@@ -220,7 +220,7 @@ function blurRatioRaster() {
                     runningTotal += thisGaussian * thisVal;
                 }
             }
-            tmpRaster[y][x] = runningTotal / (w * w)
+            tmpRaster[y][x] = runningTotal
         }
     }
     ratio.raster = tmpRaster;
