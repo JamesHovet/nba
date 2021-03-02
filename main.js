@@ -27,11 +27,13 @@ var bkSVG = d3.select("#bk-svg")
 var svg = svgRaw.append("g")
 
 var courtG = svg.append("g").attr("id", "court");
+var courtRadialOverlayG = svg.append("g").attr("id", "overlay")
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
 var histBarsG = histG.append("g")
 var histYAxisG = histG.append("g").attr("transform", `translate(0, ${0})`)
 let histXAxisG = histG.append("g").attr("transform", `translate(0, ${histogramSize.height})`)
 var progressBarG = svg.append("g").attr("id", "progressBar");
+
 
 var histogramTooltipDiv = d3.select("#histogramMouseover")
 
@@ -129,6 +131,35 @@ distanceBins = d3.bin().domain(histX.domain()).thresholds(35)([])
 
 var histY = d3.scaleLinear()
     .range([histogramSize.height, 0])
+
+
+//----------------------------------------------------------------------------------------------------------------------
+// Setup Radial Rings
+//----------------------------------------------------------------------------------------------------------------------
+
+
+let hoopX = scaleXLinear(0)
+let hoopY = scaleYLinear(0)
+let oneFootInPx = heatmapSize.width / 50
+
+svgRaw.append("defs").append("mask").attr("id", "courtMask").append("rect").attr("width", heatmapSize.width).attr("height", heatmapSize.height).attr("x", -hoopX).attr("y", -hoopY).attr("fill", "white")
+courtRadialOverlayG.attr("transform", "translate(" + hoopX + "," + hoopY + ")")
+
+for(i = 0; i < 35; i++) {
+    let r0 = (i + 1) * oneFootInPx;
+    let r1 = i * oneFootInPx;
+
+    courtRadialOverlayG.append("path")
+        .attr("id", "radius_" + i)
+        .attr("d", () => {
+            return `M ${-r0}, 0 a ${r0},${r0} 0 1,0 ${r0 * 2},0 a ${r0},${r0} 0 1,0 ${- r0 * 2},0 z
+                    M ${-r1}, 0 a ${r1},${r1} 0 1,0 ${r1 * 2},0 a ${r1},${r1} 0 1,0 ${- r1 * 2},0 z`
+        })
+        .attr("fill-rule", "evenodd")
+        .attr("mask", "url(#courtMask)")
+        .attr("fill", "rgba(255, 255, 255, 0.3)")
+        .attr("opacity", 0)
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // Parse new data
@@ -304,13 +335,16 @@ function drawProgressBar() {
 // Event handlers
 //----------------------------------------------------------------------------------------------------------------------
 
+var lastActiveRing = 0
+
 function handleHistogramMouseover(event, d, i) {
     let unit = chosenStat.unit;
     let format = chosenStat.format;
+    let dist = Math.floor((event.x - histogramPosition.x - 10 )/histogramBarWidth)
     histogramTooltipDiv
         .style("left", event.x + "px")
         .style("top", event.y + "px") 
-        .text(`${format(d)} ${unit} From ${Math.floor((event.x - histogramPosition.x - 10 )/histogramBarWidth)}'`)
+        .text(`${format(d)} ${unit} From ${dist}'`)
         .transition()
         .duration(200)
         .style("opacity", 1)
@@ -318,6 +352,9 @@ function handleHistogramMouseover(event, d, i) {
     d3.select(event.currentTarget)
         .attr("fill", "darkblue")
 
+    d3.select("#radius_" + dist)
+        .attr("opacity", 1)
+    lastActiveRing = dist
 }
 
 function handleHistogramMouseout(event, d) {
@@ -328,6 +365,9 @@ function handleHistogramMouseout(event, d) {
         .transition()
         .duration(500)
         .style("opacity", 0)
+
+    d3.select("#radius_" + lastActiveRing)
+        .attr("opacity", 0)
     
 }
 
@@ -365,6 +405,6 @@ function outsideRaster(x, y) {
 //----------------------------------------------------------------------------------------------------------------------
 clearCanvas();
 
-// d3.text("./compiled.csv").then(ready);
-d3.text("./head.csv").then(ready);
+d3.text("./compiled.csv").then(ready);
+// d3.text("./head.csv").then(ready);
  
