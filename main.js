@@ -1,15 +1,19 @@
 var width = 1200;
-var height = 800;
+var height = 900;
 
-var resolution = 80;
-var boxWidth = (height / resolution)
-var boxMargin = 0.0;
-var boxInnerWidth = boxWidth - 2 * boxMargin;
+var resolutionX = 100;
+var resolutionY = 70;
 
-var heatmapSize = { width: height, height: height}
+var heatmapSize = { width: 800, height: (800) * (350 / 500)}
 
-var histogramPosition = {x : 840, y: 780}
-var histogramSize = {width: 340, height : 250 }
+var boxWidth = heatmapSize.width / resolutionX
+var boxHeight = heatmapSize.height / resolutionY
+
+var heatmapScaleSize = { width : heatmapSize.width, height: 50}
+var heatmapScalePosition = { x : 0, y: 580}
+
+var histogramPosition = {x : 50, y: 820}
+var histogramSize = {width: 700, height : 180 }
 var histogramBarWidth = histogramSize.width / 35
 
 var sliceSize = 50000;
@@ -28,6 +32,7 @@ var svg = svgRaw.append("g")
 
 var courtG = svg.append("g").attr("id", "court");
 var courtRadialOverlayG = svg.append("g").attr("id", "overlay")
+var heatmapScaleG = svg.append("g").attr("transform", `translate(${heatmapScalePosition.x}, ${heatmapScalePosition.y})`)
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
 var histBarsG = histG.append("g")
 var histYAxisG = histG.append("g").attr("transform", `translate(0, ${0})`)
@@ -58,7 +63,7 @@ var col = {
 var idToTeams = {55: 'PHI', 38: 'BOS', 44: 'GSW', 60: 'OKC', 49: 'MIL', 66: 'CHA', 51: 'BKN', 65: 'DET', 54: 'IND', 63: 'MEM', 48: 'MIA', 53: 'ORL', 37: 'ATL', 52: 'NYK', 61: 'TOR', 39: 'CLE', 40: 'NOP', 45: 'HOU', 59: 'SAS', 50: 'MIN', 58: 'SAC', 62: 'UTA', 46: 'LAC', 43: 'DEN', 42: 'DAL', 56: 'PHX', 41: 'CHI', 64: 'WAS', 47: 'LAL', 57: 'POR'}
 var teamsToIds = {'PHI': 55, 'BOS': 38, 'GSW': 44, 'OKC': 60, 'MIL': 49, 'CHA': 66, 'BKN': 51, 'DET': 65, 'IND': 54, 'MEM': 63, 'MIA': 48, 'ORL': 53, 'ATL': 37, 'NYK': 52, 'TOR': 61, 'CLE': 39, 'NOP': 40, 'HOU': 45, 'SAS': 59, 'MIN': 50, 'SAC': 58, 'UTA': 62, 'LAC': 46, 'DEN': 43, 'DAL': 42, 'PHX': 56, 'CHI': 41, 'WAS': 64, 'LAL': 47, 'POR': 57}
 
-const emptySquares = function() {return new Array(resolution).fill(0).map(() => new Array(resolution).fill(0))}
+const emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
 const emptyHist = function() {return new Array(35).fill(0);}
 
 var rows = undefined;
@@ -105,7 +110,7 @@ const pyRange = (start, stop, step = 1) =>
   Array(Math.ceil((stop - start) / step)).fill(start).map((x, y) => x + y * step)
 var scaleX = d3.scaleQuantize()
     .domain([-250, 250])
-    .range([...Array(resolution).keys()])
+    .range([...Array(resolutionX).keys()])
 
 var scaleXLinear = d3.scaleLinear()
     .domain([-250, 250])
@@ -113,16 +118,17 @@ var scaleXLinear = d3.scaleLinear()
     // .range(pyRange(0, 800, 10))
 
 var scaleY = d3.scaleQuantize()
-    .domain([-50, 450])
-    .range([...Array(resolution).keys()])
+    .domain([-50, 300])
+    .range([...Array(resolutionY).keys()])
     // .range(pyRange(0, 800, 10))
 
 var scaleYLinear = d3.scaleLinear()
-    .domain([-50, 450])
+    .domain([-50, 300])
     .range([0, heatmapSize.height])
 
-var scaleHeatmap = d3.scaleQuantile()
-    .range(d3.interpolateBlues)
+var numQuantiles = 13;
+var quantiles;
+var scaleHeatmap;
 
 var histX = d3.scaleLinear()
     .range([0, histogramSize.width])
@@ -158,7 +164,7 @@ for(i = 0; i < 35; i++) {
         })
         .attr("fill-rule", "evenodd")
         .attr("mask", "url(#courtMask)")
-        .attr("fill", "rgba(255, 255, 255, 0.3)")
+        .attr("fill", "rgba(255, 255, 255, 0.5)")
         .attr("opacity", 0)
 }
 
@@ -175,7 +181,7 @@ function processSlice(slice, filter) {
         context.fill();
         context.closePath();
 
-        if (d[col.LOC_Y] < 450){
+        if (d[col.LOC_Y] < 300){
             let x = scaleX(d[col.LOC_X]);
             let y = scaleY(d[col.LOC_Y]);
             attempts.raster[y][x] += 1;
@@ -204,17 +210,17 @@ function blurRatioRaster() {
     tmpRaster = emptySquares()
     const w = 5;
     let tmp = Array(w * w).fill(0)
-    for(let x = 0; x < resolution; x ++) {
-        for(let y = 0; y < resolution; y++) {
+    for(let x = 0; x < resolutionX; x ++) {
+        for(let y = 0; y < resolutionY; y++) {
             let runningTotal = 0;
             for (let xx = - (w - 1) / 2; xx < (w - 1) / 2; xx++) {
                 for (let yy = - (w - 1) / 2; yy < (w - 1) / 2; yy++) {
                     let thisGaussian = gaussianMatrix5[2 + xx][2 + yy]
-                    let thisVal = outsideRaster(x + xx, y + yy) ? 0 : ratio.raster[x + xx][y + yy]
+                    let thisVal = outsideRaster(x + xx, y + yy) ? 0 : ratio.raster[y + yy][x + xx]
                     runningTotal += thisGaussian * thisVal;
                 }
             }
-            tmpRaster[x][y] = runningTotal / (w * w)
+            tmpRaster[y][x] = runningTotal / (w * w)
         }
     }
     ratio.raster = tmpRaster;
@@ -270,6 +276,8 @@ function drawLoop(){
 
     drawCourt(chosenStat);
 
+    drawHeatmapScale(chosenStat);
+
     drawHistogram(chosenStat)
     
     requestAnim(drawLoop);
@@ -281,16 +289,45 @@ function drawLoop(){
 
 function drawCourt(stat) {
     let raster = stat.raster;
-    scaleHeatmap = d3.scaleSequentialQuantile(raster.flat(), d3.interpolateBlues)
+    quantiles = d3.scaleSequentialQuantile().domain(raster.flat()).quantiles(numQuantiles)
+    scaleHeatmap = d3.scaleSequentialQuantile(quantiles, d3.interpolateBlues);
     courtG.selectAll("rect")
         .data(raster.flat())
         .join("rect")
-        .attr("x", (d, i) => (i % resolution) * boxWidth + boxMargin)
-        .attr("y", (d, i) => Math.floor(i / resolution) * boxWidth + boxMargin)
-        .attr("width", boxInnerWidth)
-        .attr("height", boxInnerWidth)
+        .attr("x", (d, i) => (i % resolutionX) * boxWidth )
+        .attr("y", (d, i) => Math.floor(i / resolutionX) * boxWidth )
+        .attr("width", boxWidth)
+        .attr("height", boxHeight)
         .attr("fill", (d) => scaleHeatmap(d))
+}
 
+function drawHeatmapScale(stat) {
+    heatmapScaleG.selectAll("rect")
+        .data(quantiles)
+        .join(
+            enter => enter.append("rect")
+                .attr("width", heatmapScaleSize.width / quantiles.length)
+                .attr("height", 15)
+                .attr("x", (d, i) => (i) * heatmapScaleSize.width / quantiles.length)
+                .attr("y", 0)
+                .attr("stroke", "black"),
+            update =>  update
+                .attr("fill", (d, i) => scaleHeatmap.range()[quantiles.length - i - 1])
+                .select("text")
+        )
+
+    heatmapScaleG.selectAll("text")
+        .data(quantiles)
+        .join(
+            enter => enter.append("text")
+                .attr("x", (d, i) => i * heatmapScaleSize.width / quantiles.length)
+                .attr("y", 30)
+                .attr("class", "legend_text"),
+            update => update
+                .text((d, i) => d3.format(",.2r")(quantiles[quantiles.length - i - 1]))
+        )
+        
+        
 }
 
 function drawHistogram(stat) {
@@ -327,7 +364,7 @@ function drawProgressBar() {
             .join("rect")
             .attr("y", height - 5)
             .attr("x", 0)
-            .attr("width", (d) => (d / rows.length) * height)
+            .attr("width", (d) => (d / rows.length) * heatmapSize.width)
             .attr("height", 5)
             .attr("fill", "darkblue")
     }
@@ -396,7 +433,7 @@ function drawCanvas() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function outsideRaster(x, y) {
-    if (x < 0 || x >= resolution || y < 0 || y >= resolution) {
+    if (x < 0 || x >= resolutionX || y < 0 || y >= resolutionY) {
         return true
     } else {
         return false
