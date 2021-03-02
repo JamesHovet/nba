@@ -14,6 +14,16 @@
       top: 400px;
       left: 500px;
     }
+
+    #histogramMouseover {
+      position: absolute;
+      height: 1.5em;
+      padding: 2px;
+      background: white;
+      border: 0px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
 </style>
 
 <body>
@@ -21,6 +31,9 @@
   <canvas></canvas>
   <svg></svg>
   <object id="bk-svg" data="Basketball-Court.svg" type="image/svg+xml"></object>
+
+  <div id="histogramMouseover" style="opacity: 0; top: 0px; left: 0px;">
+  </div>  
 </body>
 
 <script src="http://d3js.org/d3.v6.min.js"></script>

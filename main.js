@@ -8,8 +8,8 @@ var boxInnerWidth = boxWidth - 2 * boxMargin;
 
 var heatmapSize = { width: height, height: height}
 
-var histogramPosition = {x : 820, y: 780}
-var histogramSize = {width: 360, height : 250 }
+var histogramPosition = {x : 840, y: 780}
+var histogramSize = {width: 340, height : 250 }
 var histogramBarWidth = histogramSize.width / 35
 
 var sliceSize = 50000;
@@ -28,7 +28,12 @@ var svg = svgRaw.append("g")
 
 var courtG = svg.append("g").attr("id", "court");
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
+var histBarsG = histG.append("g")
+var histYAxisG = histG.append("g").attr("transform", `translate(0, ${0})`)
+let histXAxisG = histG.append("g").attr("transform", `translate(0, ${histogramSize.height})`)
 var progressBarG = svg.append("g").attr("id", "progressBar");
+
+var histogramTooltipDiv = d3.select("#histogramMouseover")
 
 var detachedContainer = document.createElement("custom");
 var dataContainer = d3.select(detachedContainer);
@@ -57,17 +62,23 @@ var rows = undefined;
 
 var attempts = {
     raster : emptySquares(),
-    hist : emptyHist()
+    hist : emptyHist(),
+    unit : "Shots",
+    format : d3.format(",")
 }
 
 var pts = {
     raster : emptySquares(),
-    hist : emptyHist()
+    hist : emptyHist(),
+    unit : "Points",
+    format : d3.format(",")
 }
 
 var ratio = {
     raster : emptySquares(),
-    hist : emptyHist()
+    hist : emptyHist(),
+    unit : "Shooting Percentage",
+    format : d3.format(".3f")
 }
 
 var chosenStat = attempts;
@@ -110,10 +121,14 @@ var scaleYLinear = d3.scaleLinear()
 var scaleHeatmap = d3.scaleQuantile()
     .range(d3.interpolateBlues)
 
-distanceBins = d3.bin().domain([0, 35]).thresholds(35)([])
+var histX = d3.scaleLinear()
+    .range([0, histogramSize.width])
+    .domain([0, 35])
+
+distanceBins = d3.bin().domain(histX.domain()).thresholds(35)([])
 
 var histY = d3.scaleLinear()
-    .range([0, histogramSize.height])
+    .range([histogramSize.height, 0])
 
 //----------------------------------------------------------------------------------------------------------------------
 // Parse new data
@@ -132,9 +147,11 @@ function processSlice(slice, filter) {
         let y = scaleY(d[col.LOC_Y]);
         attempts.raster[y][x] += 1;
         pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
-        let dist = Math.min(Math.floor(d[col.SHOT_DISTANCE]),34);
-        attempts.hist[dist] += 1;
-        pts.hist[dist] += d[col.SHOT_MADE_FLAG];
+        let dist = Math.floor(d[col.SHOT_DISTANCE]);
+        if (dist < 35) {
+            attempts.hist[dist] += 1;
+            pts.hist[dist] += d[col.SHOT_MADE_FLAG];
+        }
     });
     ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => attempts.raster[rowI][colI] != 0 ? pts.raster[rowI][colI] / attempts.raster[rowI][colI] : 0))
     blurRatioRaster()
@@ -181,6 +198,11 @@ function ready(compiled) {
     d3.select("#initial-loading").transition().duration(2000).style("opacity", 0)
     svgRaw.transition().duration(2000).style("opacity", 1)
     bkSVG.transition().duration(2000).style("opacity", 1)
+
+
+    let histXAxis = d3.axisBottom(histX)
+        .tickValues([0, 5, 10, 15, 20, 25, 30, 35])
+    histXAxisG.call(histXAxis);
 
     drawLoop();    
 
@@ -239,15 +261,25 @@ function drawCourt(stat) {
 
 function drawHistogram(stat) {
     hist = stat.hist;
-    histY = histY.domain(d3.extent(hist))
-    histG.selectAll("rect")
+    histY = histY.domain([0,d3.max(hist)])
+    histBarsG.selectAll("rect")
         .data(hist)
-        .join("rect")
-        .attr("x", (d, i) => i * histogramBarWidth)
-        .attr("y", (d, i) => histogramSize.height - histY(d))
-        .attr("width", histogramBarWidth)
-        .attr("height", (d, i) => histY(d))
-        .attr("fill", "lightblue")
+        .join(
+            enter => enter.append("rect")
+                .attr("fill", "lightblue")
+                .on("mouseover", handleHistogramMouseover)
+                .on("mouseout", handleHistogramMouseout),
+            update => update
+                .attr("x", (d, i) => i * histogramBarWidth)
+                .attr("y", (d, i) => histY(d))
+                .attr("width", histogramBarWidth)
+                .attr("height", (d, i) => histY(0) - histY(d))
+        )
+        
+    let histYAxis = d3.axisLeft(histY)
+        .ticks(15)
+    histYAxisG.call(histYAxis);
+
 
 }
 
@@ -267,6 +299,37 @@ function drawProgressBar() {
     }
 }
 
+
+//----------------------------------------------------------------------------------------------------------------------
+// Event handlers
+//----------------------------------------------------------------------------------------------------------------------
+
+function handleHistogramMouseover(event, d, i) {
+    let unit = chosenStat.unit;
+    let format = chosenStat.format;
+    histogramTooltipDiv
+        .style("left", event.x + "px")
+        .style("top", event.y + "px") 
+        .text(`${format(d)} ${unit} From ${Math.floor((event.x - histogramPosition.x - 10 )/histogramBarWidth)}'`)
+        .transition()
+        .duration(200)
+        .style("opacity", 1)
+    
+    d3.select(event.currentTarget)
+        .attr("fill", "darkblue")
+
+}
+
+function handleHistogramMouseout(event, d) {
+    d3.select(event.currentTarget)
+        .attr("fill", "lightblue")
+        
+    histogramTooltipDiv
+        .transition()
+        .duration(500)
+        .style("opacity", 0)
+    
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // Canvas Utils
@@ -302,6 +365,6 @@ function outsideRaster(x, y) {
 //----------------------------------------------------------------------------------------------------------------------
 clearCanvas();
 
-d3.text("./compiled.csv").then(ready);
-// d3.text("./head.csv").then(ready);
+// d3.text("./compiled.csv").then(ready);
+d3.text("./head.csv").then(ready);
  
