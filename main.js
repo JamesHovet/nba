@@ -175,14 +175,16 @@ function processSlice(slice, filter) {
         context.fill();
         context.closePath();
 
-        let x = scaleX(d[col.LOC_X]);
-        let y = scaleY(d[col.LOC_Y]);
-        attempts.raster[y][x] += 1;
-        pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
-        let dist = Math.floor(d[col.SHOT_DISTANCE]);
-        if (dist < 35) {
-            attempts.hist[dist] += 1;
-            pts.hist[dist] += d[col.SHOT_MADE_FLAG];
+        if (d[col.LOC_Y] < 450){
+            let x = scaleX(d[col.LOC_X]);
+            let y = scaleY(d[col.LOC_Y]);
+            attempts.raster[y][x] += 1;
+            pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
+            let dist = Math.floor(d[col.SHOT_DISTANCE]);
+            if (dist < 35) {
+                attempts.hist[dist] += 1;
+                pts.hist[dist] += d[col.SHOT_MADE_FLAG];
+            }
         }
     });
     ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => attempts.raster[rowI][colI] != 0 ? pts.raster[rowI][colI] / attempts.raster[rowI][colI] : 0))
