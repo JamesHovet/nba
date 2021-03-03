@@ -1,4 +1,4 @@
-var width = 1200;
+var width = 800;
 var height = 900;
 
 var resolutionX = 100;
@@ -16,8 +16,13 @@ var histogramPosition = {x : 50, y: 820}
 var histogramSize = {width: 700, height : 180 }
 var histogramBarWidth = histogramSize.width / 35
 
+var courtYDomain = [-50, 300]
+
 var sliceSize = 50000;
 
+var drawingTd = d3.select("#drawing-td")
+    .attr("width", width)
+    .attr("height", height)
 var chart = d3.select("canvas");
 chart.attr("width", heatmapSize.width)
     .attr("height", heatmapSize.height)
@@ -118,12 +123,12 @@ var scaleXLinear = d3.scaleLinear()
     // .range(pyRange(0, 800, 10))
 
 var scaleY = d3.scaleQuantize()
-    .domain([-50, 300])
+    .domain(courtYDomain)
     .range([...Array(resolutionY).keys()])
     // .range(pyRange(0, 800, 10))
 
 var scaleYLinear = d3.scaleLinear()
-    .domain([-50, 300])
+    .domain(courtYDomain)
     .range([0, heatmapSize.height])
 
 var numQuantiles = 13;
@@ -169,19 +174,27 @@ for(i = 0; i < 35; i++) {
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Filter
+//----------------------------------------------------------------------------------------------------------------------
+
+function doesPassFilter(d) {
+    return true;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Parse new data
 //----------------------------------------------------------------------------------------------------------------------
 
 function processSlice(slice, filter) {
     context.fillStyle = "rgba(255, 0, 0, 1)";
     slice.forEach(d => {
+        if(d[col.LOC_Y] < courtYDomain[1] && doesPassFilter(d)){
 
-        context.beginPath();
-        context.rect(scaleXLinear(d[col.LOC_X]), scaleYLinear(d[col.LOC_Y]), 1, 1);
-        context.fill();
-        context.closePath();
+            context.beginPath();
+            context.rect(scaleXLinear(d[col.LOC_X]), scaleYLinear(d[col.LOC_Y]), 1, 1);
+            context.fill();
+            context.closePath();
 
-        if (d[col.LOC_Y] < 300){
             let x = scaleX(d[col.LOC_X]);
             let y = scaleY(d[col.LOC_Y]);
             attempts.raster[y][x] += 1;
@@ -191,6 +204,7 @@ function processSlice(slice, filter) {
                 attempts.hist[dist] += 1;
                 pts.hist[dist] += d[col.SHOT_MADE_FLAG];
             }
+
         }
     });
     ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => attempts.raster[rowI][colI] != 0 ? pts.raster[rowI][colI] / attempts.raster[rowI][colI] : 0))
@@ -432,6 +446,10 @@ function drawCanvas() {
 // Utils Utils
 //----------------------------------------------------------------------------------------------------------------------
 
+function searchForPlayer(str) {
+    console.log(players.filter(el => el[1].toLowerCase().match(str.toLowerCase())))
+}
+
 function outsideRaster(x, y) {
     if (x < 0 || x >= resolutionX || y < 0 || y >= resolutionY) {
         return true
@@ -440,11 +458,100 @@ function outsideRaster(x, y) {
     }
 }
 
+
+//----------------------------------------------------------------------------------------------------------------------
+// Menu stuff
+//----------------------------------------------------------------------------------------------------------------------
+
+var playerIDsToInfo = {}
+players.forEach((row) => {playerIDsToInfo[row[0]] = row})
+
+//https://twitter.github.io/typeahead.js/examples/
+var substringMatcherPlayers = function(rows) {
+    return function findMatches(q, cb) {
+        var matches, substringRegex;
+
+        // an array that will be populated with substring matches
+        matches = [];
+
+        // regex used to determine if a string contains the substring `q`
+        substrRegex = new RegExp(q, 'i');
+
+        // iterate through the pool of strings and for any string that
+        // contains the substring `q`, add it to the `matches` array
+        $.each(rows, function(i, row) {
+        if (substrRegex.test(row[1])) {
+            matches.push(row);
+        }
+        });
+        cb(matches);
+    };
+};
+
+var player_search_typeahead = $('#player-search .typeahead');
+player_search_typeahead.typeahead({
+    hint: true,
+    highlight: true,
+    minLength: 1
+    },
+    {
+    name: 'players',
+    source: substringMatcherPlayers(players),
+    display: (row) => row[1]
+});
+
+player_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
+    let info = playerIDsToInfo[+suggestion];
+    $("#player-img").attr("src", `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${info[0]}.png`)
+});
+
+var teams = {37: {"abbrev": "ATL","full": "Atlanta Hawks"},38: {"abbrev": "BOS","full": "Boston Celtics"},39: {"abbrev": "CLE","full": "Cleveland Cavaliers"},40: {"abbrev": "NOP","full": "New Orleans Pelicans"},41: {"abbrev": "CHI","full": "Chicago Bulls"},42: {"abbrev": "DAL","full": "Dallas Mavericks"},43: {"abbrev": "DEN","full": "Denver Nuggets"},44: {"abbrev": "GSW","full": "Golden State Warriors"},45: {"abbrev": "HOU","full": "Houston Rockets"},46: {"abbrev": "LAC","full": "Los Angeles Clippers"},47: {"abbrev": "LAL","full": "Los Angeles Lakers"},48: {"abbrev": "MIA","full": "Miami Heat"},49: {"abbrev": "MIL","full": "Milwaukee Bucks"},50: {"abbrev": "MIN","full": "Minnesota Timberwolves"},51: {"abbrev": "BKN","full": "Brooklyn Nets"},52: {"abbrev": "NYK","full": "New York Knicks"},53: {"abbrev": "ORL","full": "Orlando Magic"},54: {"abbrev": "IND","full": "Indiana Pacers"},55: {"abbrev": "PHI","full": "Philadelphia 76ers"},56: {"abbrev": "PHX","full": "Phoenix Suns"},57: {"abbrev": "POR","full": "Portland Trail Blazers"},58: {"abbrev": "SAC","full": "Sacramento Kings"},59: {"abbrev": "SAS","full": "San Antonio Spurs"},60: {"abbrev": "OKC","full": "Oklahoma City Thunder"},61: {"abbrev": "TOR","full": "Toronto Raptors"},62: {"abbrev": "UTA","full": "Utah Jazz"},63: {"abbrev": "MEM","full": "Memphis Grizzlies"},64: {"abbrev": "WAS","full": "Washington Wizards"},65: {"abbrev": "DET","full": "Detroit Pistons"},66: {"abbrev": "CHA","full": "Charlotte Hornets"}}
+
+var substringMatcherTeams = function(teamDict) {
+    return function findMatches(q, cb) {
+        var matches, substringRegex;
+
+        // an array that will be populated with substring matches
+        matches = [];
+
+        // regex used to determine if a string contains the substring `q`
+        substrRegex = new RegExp(q, 'i');
+
+        // iterate through the pool of strings and for any string that
+        // contains the substring `q`, add it to the `matches` array
+        $.each(Object.keys(teams), function(i, key) {
+            let teamInfo = teams[key]
+            if (substrRegex.test(teamInfo["full"]) || substrRegex.test(teamInfo["abbrev"])) {
+                matches.push(key);
+            }
+        });
+        cb(matches);
+    };
+};
+
+var team_search_typeahead = $('#team-search .typeahead');
+team_search_typeahead.typeahead({
+    hint: true,
+    highlight: true,
+    minLength: 1
+    },
+    {
+    name: 'team',
+    source: substringMatcherTeams(teams),
+    display: (key) => teams[key]["full"]
+});
+
+team_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
+    let info = teams[+suggestion];
+    $("#team-img").attr("src", `https://www.nba.com/stats/media/img/teams/logos/${info["abbrev"]}_logo.svg`)
+});
+
+
 //----------------------------------------------------------------------------------------------------------------------
 // start
 //----------------------------------------------------------------------------------------------------------------------
 clearCanvas();
 
-d3.text("./compiled.csv").then(ready);
-// d3.text("./head.csv").then(ready);
+// d3.text("./compiled.csv").then(ready);
+d3.text("./head.csv").then(ready);
  
