@@ -14,8 +14,8 @@ var heatmapSize = { width: 800, height: (800) * (350 / 500)}
 var boxWidth = heatmapSize.width / resolutionX
 var boxHeight = heatmapSize.height / resolutionY
 
-var heatmapScaleSize = { width : heatmapSize.width - 50, height: 50}
-var heatmapScalePosition = { x : 25, y: 570}
+var heatmapScaleSize = { width : heatmapSize.width - 100, height: 50}
+var heatmapScalePosition = { x : 5, y: 570}
 
 var histogramPosition = {x : 50, y: 820}
 var histogramSize = {width: 700, height : 180 }
@@ -25,7 +25,9 @@ var courtYDomain = [-50, 300]
 
 var sliceSize = 50000;
 
-var ratioCutoff = 25;
+var ratioCutoff = 50;
+
+var numQuantiles = 13;
 
 var drawingTd = d3.select("#drawing-td")
     .attr("width", width)
@@ -44,7 +46,11 @@ var svg = svgRaw.append("g")
 
 var courtG = svg.append("g").attr("id", "court");
 var courtRadialOverlayG = svg.append("g").attr("id", "overlay")
-var heatmapScaleG = svg.append("g").attr("transform", `translate(${heatmapScalePosition.x}, ${heatmapScalePosition.y})`)
+var heatmapScaleRootG = svg.append("g").attr("transform", `translate(${heatmapScalePosition.x}, ${heatmapScalePosition.y})`)
+var heatmapScaleG = heatmapScaleRootG.append("g")
+var heatmapScaleNoDataG = heatmapScaleRootG.append("g").attr("transform", "translate(" + (heatmapScaleSize.width + 15) + ",0)")
+heatmapScaleNoDataG.append("rect").attr("id", "noData").attr("width", heatmapScaleSize.width / (numQuantiles + 1)).attr("height", 15).attr("fill", "grey").attr("stroke", "black")
+heatmapScaleNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(30)")
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
 var histBarsG = histG.append("g")
 var histYAxisG = histG.append("g").attr("transform", `translate(0, ${0})`)
@@ -140,7 +146,6 @@ var scaleYLinear = d3.scaleLinear()
     .domain(courtYDomain)
     .range([0, heatmapSize.height])
 
-var numQuantiles = 13;
 var quantiles;
 var scaleHeatmap;
 
@@ -272,26 +277,6 @@ function ready(compiled) {
     histXAxisG.call(histXAxis);
 
     drawLoop();    
-
-    // var dataBinding = dataContainer.selectAll("custom.rect")
-    //     .data(rows)
-
-    //     dataBinding.enter()
-    //     .append("custom")
-    //     .filter((d) => {
-    //         return d[col.SEASON] == 2011;
-    //     })
-    //     .classed("rect", true)
-    //     .attr("x", (d) => scaleX(d[col.LOC_X]))
-    //     .attr("y", (d) => scaleY(d[col.LOC_Y]))
-    //     .attr("size", 8)
-    //     .attr("fillStyle", (d) => {if(d[col.SHOT_MADE_FLAG]){
-    //         return "rgba(0, 255, 0, 0.02)"
-    //     } else {
-    //         return "rgba(255, 0, 0, 0.02)"
-    //     }});
-    
-    // drawCanvas()
 }
 
 var valid = true;
@@ -406,8 +391,7 @@ function drawHeatmapScale(stat) {
                     }
                 })
         )
-        
-        
+    heatmapScaleNoDataG.attr("opacity", chosenStat == ratio ? 1 : 0)
 }
 
 function drawHistogram(stat) {
