@@ -1,16 +1,21 @@
 var width = 800;
 var height = 900;
 
-var resolutionX = 100;
-var resolutionY = 70;
+var resolutionX = 80;
+var resolutionY = 56;
+
+function setResolutionFactor(factor) {
+    resolutionX = Math.floor(80 * factor);
+    resolutionY = Math.floor(56 * factor);
+}
 
 var heatmapSize = { width: 800, height: (800) * (350 / 500)}
 
 var boxWidth = heatmapSize.width / resolutionX
 var boxHeight = heatmapSize.height / resolutionY
 
-var heatmapScaleSize = { width : heatmapSize.width, height: 50}
-var heatmapScalePosition = { x : 0, y: 580}
+var heatmapScaleSize = { width : heatmapSize.width - 50, height: 50}
+var heatmapScalePosition = { x : 25, y: 570}
 
 var histogramPosition = {x : 50, y: 820}
 var histogramSize = {width: 700, height : 180 }
@@ -19,6 +24,8 @@ var histogramBarWidth = histogramSize.width / 35
 var courtYDomain = [-50, 300]
 
 var sliceSize = 50000;
+
+var ratioCutoff = 25;
 
 var drawingTd = d3.select("#drawing-td")
     .attr("width", width)
@@ -46,6 +53,7 @@ var progressBarG = svg.append("g").attr("id", "progressBar");
 
 
 var histogramTooltipDiv = d3.select("#histogramMouseover")
+var courtTooltipDiv = d3.select("#courtMouseover")
 
 var detachedContainer = document.createElement("custom");
 var dataContainer = d3.select(detachedContainer);
@@ -68,8 +76,8 @@ var col = {
 var idToTeams = {55: 'PHI', 38: 'BOS', 44: 'GSW', 60: 'OKC', 49: 'MIL', 66: 'CHA', 51: 'BKN', 65: 'DET', 54: 'IND', 63: 'MEM', 48: 'MIA', 53: 'ORL', 37: 'ATL', 52: 'NYK', 61: 'TOR', 39: 'CLE', 40: 'NOP', 45: 'HOU', 59: 'SAS', 50: 'MIN', 58: 'SAC', 62: 'UTA', 46: 'LAC', 43: 'DEN', 42: 'DAL', 56: 'PHX', 41: 'CHI', 64: 'WAS', 47: 'LAL', 57: 'POR'}
 var teamsToIds = {'PHI': 55, 'BOS': 38, 'GSW': 44, 'OKC': 60, 'MIL': 49, 'CHA': 66, 'BKN': 51, 'DET': 65, 'IND': 54, 'MEM': 63, 'MIA': 48, 'ORL': 53, 'ATL': 37, 'NYK': 52, 'TOR': 61, 'CLE': 39, 'NOP': 40, 'HOU': 45, 'SAS': 59, 'MIN': 50, 'SAC': 58, 'UTA': 62, 'LAC': 46, 'DEN': 43, 'DAL': 42, 'PHX': 56, 'CHI': 41, 'WAS': 64, 'LAL': 47, 'POR': 57}
 
-const emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
-const emptyHist = function() {return new Array(35).fill(0);}
+var emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
+var emptyHist = function() {return new Array(35).fill(0);}
 
 var rows = undefined;
 
@@ -94,7 +102,8 @@ var ratio = {
     format : d3.format(".3f")
 }
 
-var chosenStat = attempts;
+// var chosenStat = attempts;
+var chosenStat = ratio;
 
 //----------------------------------------------------------------------------------------------------------------------
 // Utils
@@ -163,6 +172,7 @@ for(i = 0; i < 35; i++) {
 
     courtRadialOverlayG.append("path")
         .attr("id", "radius_" + i)
+        .attr("class", "radius_ring")
         .attr("d", () => {
             return `M ${-r0}, 0 a ${r0},${r0} 0 1,0 ${r0 * 2},0 a ${r0},${r0} 0 1,0 ${- r0 * 2},0 z
                     M ${-r1}, 0 a ${r1},${r1} 0 1,0 ${r1 * 2},0 a ${r1},${r1} 0 1,0 ${- r1 * 2},0 z`
@@ -179,6 +189,9 @@ for(i = 0; i < 35; i++) {
 
 function doesPassFilter(d) {
     return true;
+    // return d[col.SEASON] == 2019;
+    // return d[col.TEAM_ID] == 38;
+    // return d[col.PLAYER_ID] == 2544;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -208,7 +221,7 @@ function processSlice(slice, filter) {
         }
     });
     ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => attempts.raster[rowI][colI] != 0 ? pts.raster[rowI][colI] / attempts.raster[rowI][colI] : 0))
-    blurRatioRaster()
+    blurRaster(ratio);
     ratio.hist = ratio.hist.map((_, i) => pts.hist[i] / attempts.hist[i])
 }
 
@@ -220,7 +233,7 @@ const gaussianMatrix5 = [
     [0.003765,0.015019,0.023792,0.015019,0.003765]
 ]
 
-function blurRatioRaster() {
+function blurRaster(stat) {
     tmpRaster = emptySquares()
     const w = 5;
     let tmp = Array(w * w).fill(0)
@@ -230,14 +243,14 @@ function blurRatioRaster() {
             for (let xx = - (w - 1) / 2; xx < (w - 1) / 2; xx++) {
                 for (let yy = - (w - 1) / 2; yy < (w - 1) / 2; yy++) {
                     let thisGaussian = gaussianMatrix5[2 + xx][2 + yy]
-                    let thisVal = outsideRaster(x + xx, y + yy) ? 0 : ratio.raster[y + yy][x + xx]
+                    let thisVal = outsideRaster(x + xx, y + yy) ? 0 : stat.raster[y + yy][x + xx]
                     runningTotal += thisGaussian * thisVal;
                 }
             }
             tmpRaster[y][x] = runningTotal
         }
     }
-    ratio.raster = tmpRaster;
+    stat.raster = tmpRaster;
 }
 
 function ready(compiled) {
@@ -281,19 +294,48 @@ function ready(compiled) {
     // drawCanvas()
 }
 
+var valid = true;
+function invalidate() {
+    valid = false;
+    currentIndex = 0
+    emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
+    emptyHist = function() {return new Array(35).fill(0);}
+    scaleX.range([...Array(resolutionX).keys()])
+    scaleY.range([...Array(resolutionY).keys()])
+    boxWidth = heatmapSize.width / resolutionX
+    boxHeight = heatmapSize.height / resolutionY
+    attempts.raster = emptySquares();
+    attempts.hist = emptyHist();
+    pts.raster = emptySquares();
+    pts.hist = emptyHist();
+    ratio.raster = emptySquares();
+    ratio.hist = emptyHist();
+    clearCanvas()
+    valid = true;
+}
+
+function changeDisplayedStat(newStat) {
+    chosenStat = newStat;
+    drawCourt(chosenStat);
+    drawHeatmapScale(chosenStat)
+    drawHistogram(chosenStat)
+}
+
 var currentIndex = 0;
 function drawLoop(){
-    processSlice(rows.slice(currentIndex, currentIndex + sliceSize));
-    currentIndex += sliceSize;
+    if (valid && currentIndex < rows.length) {
+        processSlice(rows.slice(currentIndex, currentIndex + sliceSize));
+        currentIndex += sliceSize;
 
-    drawProgressBar()
+        drawProgressBar()
 
-    drawCourt(chosenStat);
+        drawCourt(chosenStat);
 
-    drawHeatmapScale(chosenStat);
+        drawHeatmapScale(chosenStat);
 
-    drawHistogram(chosenStat)
-    
+        drawHistogram(chosenStat)
+    }
+   
     requestAnim(drawLoop);
 }
 
@@ -303,16 +345,31 @@ function drawLoop(){
 
 function drawCourt(stat) {
     let raster = stat.raster;
-    quantiles = d3.scaleSequentialQuantile().domain(raster.flat()).quantiles(numQuantiles)
+    let attemptsRasterFlat = attempts.raster.flat();
+    if (chosenStat == ratio) {
+        quantiles = d3.scaleSequentialQuantile().domain(raster.flat().filter((d, i) => attemptsRasterFlat[i] > ratioCutoff)).quantiles(numQuantiles)
+    } else {
+        quantiles = d3.scaleSequentialQuantile().domain(raster.flat()).quantiles(numQuantiles)
+    }
     scaleHeatmap = d3.scaleSequentialQuantile(quantiles, d3.interpolateBlues);
     courtG.selectAll("rect")
-        .data(raster.flat())
+        .data(raster.flat().map((d, i) => {return {"val" : d, "index" : i};}))
         .join("rect")
         .attr("x", (d, i) => (i % resolutionX) * boxWidth )
-        .attr("y", (d, i) => Math.floor(i / resolutionX) * boxWidth )
+        .attr("y", (d, i) => Math.floor(i / resolutionX) * boxHeight )
         .attr("width", boxWidth)
         .attr("height", boxHeight)
-        .attr("fill", (d) => scaleHeatmap(d))
+        .attr("fill", (d, i) => { 
+            if (chosenStat == ratio && attemptsRasterFlat[i] < ratioCutoff) {
+            // if (true) {
+                return "grey";
+            } else {
+                return scaleHeatmap(d.val);
+            }
+        })
+        .on("mouseover", handleCourtSquareMousover)
+        .on("mouseout", handleCourtSquareMouseout)
+ 
 }
 
 function drawHeatmapScale(stat) {
@@ -334,11 +391,20 @@ function drawHeatmapScale(stat) {
         .data(quantiles)
         .join(
             enter => enter.append("text")
-                .attr("x", (d, i) => i * heatmapScaleSize.width / quantiles.length)
-                .attr("y", 30)
+                .attr("transform", (d, i) => `translate(${(i * heatmapScaleSize.width / quantiles.length) + 15}, 25) rotate(30)`)
                 .attr("class", "legend_text"),
             update => update
-                .text((d, i) => d3.format(",.2r")(quantiles[quantiles.length - i - 1]))
+                .text((d, i) => {
+                    if(chosenStat == ratio) {
+                        return d3.format(",.3r")(quantiles[quantiles.length - i - 1]).substring(1)
+                        + "-"  
+                        + d3.format(",.3r")(NaNToZero(quantiles[quantiles.length - i - 2])).substring(1)
+                    } else {
+                        return d3.format(",.2r")(quantiles[quantiles.length - i - 1])
+                        + "-"  
+                        + d3.format(",.2r")(NaNToZero(quantiles[quantiles.length - i - 2]))
+                    }
+                })
         )
         
         
@@ -358,7 +424,7 @@ function drawHistogram(stat) {
                 .attr("x", (d, i) => i * histogramBarWidth)
                 .attr("y", (d, i) => histY(d))
                 .attr("width", histogramBarWidth)
-                .attr("height", (d, i) => histY(0) - histY(d))
+                .attr("height", (d, i) => isNaN(histY(0) - histY(d)) ? 0 : histY(0) - histY(d))
         )
         
     let histYAxis = d3.axisLeft(histY)
@@ -425,6 +491,26 @@ function handleHistogramMouseout(event, d) {
     
 }
 
+function handleCourtSquareMousover(event, d) {
+    let unit = chosenStat.unit;
+    let format = chosenStat.format;
+    if(chosenStat != ratio || attempts.raster.flat()[d.index] > ratioCutoff){
+        courtTooltipDiv
+            .style("left", event.x + "px")
+            .style("top", event.y + "px") 
+            .text(chosenStat.format != ratio.format ? `${format(d.val)} ${unit}` : `${format(d.val)} ${unit}\nn = ${attempts.raster.flat()[d.index]}`)
+            .transition()
+            .duration(200)
+            .style("opacity", 1)
+    }
+}
+
+function handleCourtSquareMouseout(event, d) {
+    courtTooltipDiv
+        .transition()
+        .duration(500)
+        .style("opacity", 0)
+}
 //----------------------------------------------------------------------------------------------------------------------
 // Canvas Utils
 //----------------------------------------------------------------------------------------------------------------------
@@ -448,6 +534,10 @@ function drawCanvas() {
 
 function searchForPlayer(str) {
     console.log(players.filter(el => el[1].toLowerCase().match(str.toLowerCase())))
+}
+
+function NaNToZero(x) {
+    return isNaN(x) ? 0 : x;
 }
 
 function outsideRaster(x, y) {
@@ -552,6 +642,6 @@ team_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
 //----------------------------------------------------------------------------------------------------------------------
 clearCanvas();
 
-// d3.text("./compiled.csv").then(ready);
-d3.text("./head.csv").then(ready);
+d3.text("./compiled.csv").then(ready);
+// d3.text("./head.csv").then(ready);
  

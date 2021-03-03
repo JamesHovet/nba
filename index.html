@@ -31,13 +31,21 @@
       left: 500px;
     }
 
-    #histogramMouseover {
+    #histogramMouseover, #courtMouseover{
       position: absolute;
       height: 1.5em;
       padding: 2px;
       background: rgba(255, 255, 255, 0.9);
       border: 0px;
       border-radius: 4px;
+      pointer-events: none;
+    }
+
+    .radius_ring {
+      pointer-events: none;
+    }
+
+    #bk-svg {
       pointer-events: none;
     }
 </style>
@@ -68,10 +76,12 @@
         <div id="team-display">
           <img type="image/svg+xml" id="team-img">
         </div>
+        <!-- https://jqueryui.com/slider/#range -->
       </td>
     </tr>
   </table>
 <div id="histogramMouseover" style="opacity: 0; top: 0px; left: 0px;"></div>  
+<div id="courtMouseover" style="opacity: 0; top: 0px; left: 0px;"></div>  
 </body>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
