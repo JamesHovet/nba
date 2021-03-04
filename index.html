@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <meta charset="utf-8">
+<head>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
 <style>
     svg, canvas, #bk-svg {
       opacity: 0;
@@ -10,12 +13,17 @@
     }
 
     table {
-      width: 100%;
+      table-layout: fixed;
+      word-wrap: break-word;
+    }
+
+    #drawing-td {
+      width: 820px;
     }
     
     #menu-td {
-      width:400px;
       vertical-align: initial;
+      align-items: stretch;
     }
 
     #initial-loading {
@@ -49,7 +57,7 @@
       pointer-events: none;
     }
 </style>
-
+</head>
 <body>
   <div id="initial-loading"><h1>Loading 2 Million Shots...</h1></div>
   <table>
@@ -64,6 +72,15 @@
         <object id="bk-svg" data="Basketball-Court.svg" type="image/svg+xml"></object>
       </td>
       <td id="menu-td">
+        <input type="radio" class="btn-check" name="chosen-stat" id="shots-taken" autocomplete="off" checked>
+        <label class="btn btn-outline-primary" for="shots-taken">Shots Taken</label>
+
+        <input type="radio" class="btn-check" name="chosen-stat" id="shots-made" autocomplete="off">
+        <label class="btn btn-outline-primary" for="shots-made">Shots Made</label>
+        
+        <input type="radio" class="btn-check" name="chosen-stat" id="ratio" autocomplete="off">
+        <label class="btn btn-outline-primary" for="ratio">Shooting Percentage</label>
+
         <div id="player-search">
           <input class="typeahead" type="text" placeholder="Player Name">
         </div>

@@ -503,6 +503,10 @@ function handleCourtSquareMouseout(event, d) {
         .duration(500)
         .style("opacity", 0)
 }
+
+$('#shots-taken').on('click', (e) => {changeDisplayedStat(attempts)})
+$('#shots-made').on('click', (e) => {changeDisplayedStat(pts)})
+$('#ratio').on('click', (e) => {changeDisplayedStat(ratio)})
 //----------------------------------------------------------------------------------------------------------------------
 // Canvas Utils
 //----------------------------------------------------------------------------------------------------------------------
