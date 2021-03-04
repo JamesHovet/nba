@@ -196,8 +196,8 @@ for(i = 0; i < 35; i++) {
 function doesPassFilter(d) {
     // return d[col.SEASON] == 2019;
     // return d[col.TEAM_ID] == 38;
-    // return d[col.PLAYER_ID] == 2544; // lebron
-    return d[col.PLAYER_ID] == 201939; // curry
+    return d[col.PLAYER_ID] == 2544; // lebron
+    // return d[col.PLAYER_ID] == 201939; // curry
     // return d[col.ACTION_TYPE] == actionStringToId["Layup Shot"];
     return true;
 }
@@ -413,7 +413,6 @@ function drawHistogram(stat) {
         .data(hist)
         .join(
             enter => enter.append("rect")
-                .attr("fill", "lightblue")
                 .on("mouseover", handleHistogramMouseover)
                 .on("mouseout", handleHistogramMouseout),
             update => update
@@ -423,6 +422,13 @@ function drawHistogram(stat) {
                     .duration(300)
                     .attr("height", (d, i) => isNaN(histY(0) - histY(d)) ? 0 : histY(0) - histY(d))
                     .attr("y", (d, i) => histY(d)))
+                    .attr("fill", (d, i) => {
+                        if(chosenStat == ratio && attempts.hist[i] < ratioCutoff) {
+                            return "grey";
+                        } else {
+                            return "lightblue"
+                        }
+                    })
         )
         
     let histYAxis = d3.axisLeft(histY)
@@ -455,6 +461,7 @@ function drawProgressBar() {
 
 var lastActiveRing = 0
 
+var barPriorColor = undefined;
 function handleHistogramMouseover(event, d, i) {
     let unit = chosenStat.unit;
     let format = chosenStat.format;
@@ -462,11 +469,18 @@ function handleHistogramMouseover(event, d, i) {
     histogramTooltipDiv
         .style("left", event.x + "px")
         .style("top", event.y + "px") 
-        .text(`${format(d)} ${unit} From ${dist}'`)
+        .text(() => {
+            if(chosenStat != ratio) {
+                return `${format(d)} ${unit} From ${dist}'`
+            } else {
+                return `${format(d)} ${unit} From ${dist}'; n = ${attempts.hist[dist]}`
+            }
+        })
         .transition()
         .duration(200)
         .style("opacity", 1)
     
+    barPriorColor = d3.select(event.currentTarget).attr("fill")
     d3.select(event.currentTarget)
         .attr("fill", "darkblue")
 
@@ -477,7 +491,7 @@ function handleHistogramMouseover(event, d, i) {
 
 function handleHistogramMouseout(event, d) {
     d3.select(event.currentTarget)
-        .attr("fill", "lightblue")
+        .attr("fill", barPriorColor)
         
     histogramTooltipDiv
         .transition()
