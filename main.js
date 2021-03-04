@@ -81,6 +81,8 @@ var col = {
 // https://secure.espn.com/combiner/i?img=/i/teamlogos/nba/500/lal.png
 var idToTeams = {55: 'PHI', 38: 'BOS', 44: 'GSW', 60: 'OKC', 49: 'MIL', 66: 'CHA', 51: 'BKN', 65: 'DET', 54: 'IND', 63: 'MEM', 48: 'MIA', 53: 'ORL', 37: 'ATL', 52: 'NYK', 61: 'TOR', 39: 'CLE', 40: 'NOP', 45: 'HOU', 59: 'SAS', 50: 'MIN', 58: 'SAC', 62: 'UTA', 46: 'LAC', 43: 'DEN', 42: 'DAL', 56: 'PHX', 41: 'CHI', 64: 'WAS', 47: 'LAL', 57: 'POR'}
 var teamsToIds = {'PHI': 55, 'BOS': 38, 'GSW': 44, 'OKC': 60, 'MIL': 49, 'CHA': 66, 'BKN': 51, 'DET': 65, 'IND': 54, 'MEM': 63, 'MIA': 48, 'ORL': 53, 'ATL': 37, 'NYK': 52, 'TOR': 61, 'CLE': 39, 'NOP': 40, 'HOU': 45, 'SAS': 59, 'MIN': 50, 'SAC': 58, 'UTA': 62, 'LAC': 46, 'DEN': 43, 'DAL': 42, 'PHX': 56, 'CHI': 41, 'WAS': 64, 'LAL': 47, 'POR': 57}
+var actionIdToString = { "0": "Layup Shot", "1": "Pullup Jump shot", "2": "Step Back Jump shot", "3": "Driving Layup Shot", "4": "Jump Shot", "5": "Reverse Layup Shot", "6": "Alley Oop Dunk Shot", "8": "Driving Dunk Shot", "9": "Turnaround Jump Shot", "10": "Running Jump Shot", "11": "Turnaround Fadeaway shot", "12": "Hook Shot", "14": "Dunk Shot", "16": "Fadeaway Jump Shot", "17": "Floating Jump shot", "19": "Tip Shot", "21": "Putback Layup Shot", "22": "Turnaround Hook Shot", "23": "Driving Reverse Layup Shot", "24": "Jump Bank Shot", "25": "Running Layup Shot", "28": "Driving Finger Roll Layup Shot", "50": "Driving Floating Jump Shot", "53": "Cutting Layup Shot", "54": "Tip Layup Shot", "56": "Cutting Dunk Shot", "-1": "No Shot"}
+var actionStringToId = { "Layup Shot": "0", "Pullup Jump shot": "1", "Step Back Jump shot": "2", "Driving Layup Shot": "3", "Jump Shot": "4", "Reverse Layup Shot": "5", "Alley Oop Dunk Shot": "6", "Driving Dunk Shot": "8", "Turnaround Jump Shot": "9", "Running Jump Shot": "10", "Turnaround Fadeaway shot": "11", "Hook Shot": "12", "Dunk Shot": "14", "Fadeaway Jump Shot": "16", "Floating Jump shot": "17", "Tip Shot": "19", "Putback Layup Shot": "21", "Turnaround Hook Shot": "22", "Driving Reverse Layup Shot": "23", "Jump Bank Shot": "24", "Running Layup Shot": "25", "Driving Finger Roll Layup Shot": "28", "Driving Floating Jump Shot": "50", "Cutting Layup Shot": "53", "Tip Layup Shot": "54", "Cutting Dunk Shot": "56", "No Shot": "-1"}
 
 var emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
 var emptyHist = function() {return new Array(35).fill(0);}
@@ -108,8 +110,7 @@ var ratio = {
     format : d3.format(".3f")
 }
 
-// var chosenStat = attempts;
-var chosenStat = ratio;
+var chosenStat = attempts;
 
 //----------------------------------------------------------------------------------------------------------------------
 // Utils
@@ -193,10 +194,12 @@ for(i = 0; i < 35; i++) {
 //----------------------------------------------------------------------------------------------------------------------
 
 function doesPassFilter(d) {
-    return true;
     // return d[col.SEASON] == 2019;
     // return d[col.TEAM_ID] == 38;
-    // return d[col.PLAYER_ID] == 2544;
+    // return d[col.PLAYER_ID] == 2544; // lebron
+    return d[col.PLAYER_ID] == 201939; // curry
+    // return d[col.ACTION_TYPE] == actionStringToId["Layup Shot"];
+    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -296,6 +299,7 @@ function invalidate() {
     ratio.raster = emptySquares();
     ratio.hist = emptyHist();
     clearCanvas()
+    courtG.selectAll("rect").data([]).join("rect")
     valid = true;
 }
 
@@ -334,7 +338,7 @@ function drawCourt(stat) {
     if (chosenStat == ratio) {
         quantiles = d3.scaleSequentialQuantile().domain(raster.flat().filter((d, i) => attemptsRasterFlat[i] > ratioCutoff)).quantiles(numQuantiles)
     } else {
-        quantiles = d3.scaleSequentialQuantile().domain(raster.flat()).quantiles(numQuantiles)
+        quantiles = d3.scaleSequentialQuantile().domain(raster.flat().filter((d, i) => d != 0)).quantiles(numQuantiles)
     }
     scaleHeatmap = d3.scaleSequentialQuantile(quantiles, d3.interpolateBlues);
     courtG.selectAll("rect")
@@ -355,6 +359,8 @@ function drawCourt(stat) {
                         if (chosenStat == ratio && attemptsRasterFlat[i] < ratioCutoff) {
                         // if (true) {
                             return "grey";
+                        } else if (chosenStat != ratio && d.val == 0) {
+                            return "rgb(247, 251, 255)"
                         } else {
                             return scaleHeatmap(d.val);
                         }
