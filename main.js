@@ -274,6 +274,7 @@ function ready(compiled) {
     svgRaw.transition().duration(2000).style("opacity", 1)
     bkSVG.transition().duration(2000).style("opacity", 1)
 
+    initializeTypeaheads();
 
     let histXAxis = d3.axisBottom(histX)
         .tickValues([0, 5, 10, 15, 20, 25, 30, 35])
@@ -569,19 +570,16 @@ function outsideRaster(x, y) {
 // Menu stuff
 //----------------------------------------------------------------------------------------------------------------------
 
-var playerIDsToInfo = {}
-players.forEach((row) => {playerIDsToInfo[row[0]] = row})
-
 //https://twitter.github.io/typeahead.js/examples/
 var substringMatcherPlayers = function(rows) {
     return function findMatches(q, cb) {
-        var matches, substringRegex;
-
         // an array that will be populated with substring matches
-        matches = [];
+        let matches = [];
+
+        let words = q.split("")
 
         // regex used to determine if a string contains the substring `q`
-        substrRegex = new RegExp(q, 'i');
+        let substrRegex = new RegExp(q, 'i');
 
         // iterate through the pool of strings and for any string that
         // contains the substring `q`, add it to the `matches` array
@@ -594,22 +592,13 @@ var substringMatcherPlayers = function(rows) {
     };
 };
 
-var player_search_typeahead = $('#player-search .typeahead');
-player_search_typeahead.typeahead({
-    hint: true,
-    highlight: true,
-    minLength: 1
-    },
-    {
-    name: 'players',
-    source: substringMatcherPlayers(players),
-    display: (row) => row[1]
-});
+var bloodhoundPlayers = new Bloodhound({
+    local: players,
+    identify: (player) => player.name,
+    queryTokenizer : Bloodhound.tokenizers.nonword,
+    datumTokenizer : (player) => {console.log(Bloodhound.tokenizers.nonword(player.name)); return Bloodhound.tokenizers.nonword(player.name)},
+})
 
-player_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
-    let info = playerIDsToInfo[+suggestion];
-    $("#player-img").attr("src", `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${info[0]}.png`)
-});
 
 var teams = {37: {"abbrev": "ATL","full": "Atlanta Hawks"},38: {"abbrev": "BOS","full": "Boston Celtics"},39: {"abbrev": "CLE","full": "Cleveland Cavaliers"},40: {"abbrev": "NOP","full": "New Orleans Pelicans"},41: {"abbrev": "CHI","full": "Chicago Bulls"},42: {"abbrev": "DAL","full": "Dallas Mavericks"},43: {"abbrev": "DEN","full": "Denver Nuggets"},44: {"abbrev": "GSW","full": "Golden State Warriors"},45: {"abbrev": "HOU","full": "Houston Rockets"},46: {"abbrev": "LAC","full": "Los Angeles Clippers"},47: {"abbrev": "LAL","full": "Los Angeles Lakers"},48: {"abbrev": "MIA","full": "Miami Heat"},49: {"abbrev": "MIL","full": "Milwaukee Bucks"},50: {"abbrev": "MIN","full": "Minnesota Timberwolves"},51: {"abbrev": "BKN","full": "Brooklyn Nets"},52: {"abbrev": "NYK","full": "New York Knicks"},53: {"abbrev": "ORL","full": "Orlando Magic"},54: {"abbrev": "IND","full": "Indiana Pacers"},55: {"abbrev": "PHI","full": "Philadelphia 76ers"},56: {"abbrev": "PHX","full": "Phoenix Suns"},57: {"abbrev": "POR","full": "Portland Trail Blazers"},58: {"abbrev": "SAC","full": "Sacramento Kings"},59: {"abbrev": "SAS","full": "San Antonio Spurs"},60: {"abbrev": "OKC","full": "Oklahoma City Thunder"},61: {"abbrev": "TOR","full": "Toronto Raptors"},62: {"abbrev": "UTA","full": "Utah Jazz"},63: {"abbrev": "MEM","full": "Memphis Grizzlies"},64: {"abbrev": "WAS","full": "Washington Wizards"},65: {"abbrev": "DET","full": "Detroit Pistons"},66: {"abbrev": "CHA","full": "Charlotte Hornets"}}
 
@@ -635,23 +624,42 @@ var substringMatcherTeams = function(teamDict) {
     };
 };
 
-var team_search_typeahead = $('#team-search .typeahead');
-team_search_typeahead.typeahead({
-    hint: true,
-    highlight: true,
-    minLength: 1
+
+function initializeTypeaheads(){
+    var team_search_typeahead = $('#team-search .typeahead');
+    team_search_typeahead.typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 1
+        },
+        {
+        name: 'team',
+        source: substringMatcherTeams(teams),
+        display: (key) => teams[key]["full"]
+    });
+    
+    team_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
+        let info = teams[+suggestion];
+        $("#team-img").attr("src", `https://www.nba.com/stats/media/img/teams/logos/${info["abbrev"]}_logo.svg`)
+    });
+    
+    var player_search_typeahead = $('#player-search .typeahead');
+        player_search_typeahead.typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 1
     },
     {
-    name: 'team',
-    source: substringMatcherTeams(teams),
-    display: (key) => teams[key]["full"]
-});
+        name: 'players',
+        source: bloodhoundPlayers,
+        display: (player) => player.name
+    });
 
-team_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
-    let info = teams[+suggestion];
-    $("#team-img").attr("src", `https://www.nba.com/stats/media/img/teams/logos/${info["abbrev"]}_logo.svg`)
-});
+    player_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
+        $("#player-img").attr("src", `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${suggestion.id}.png`)
+    });
 
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // start
