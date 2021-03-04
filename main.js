@@ -14,8 +14,8 @@ var heatmapSize = { width: 800, height: (800) * (350 / 500)}
 var boxWidth = heatmapSize.width / resolutionX
 var boxHeight = heatmapSize.height / resolutionY
 
-var heatmapScaleSize = { width : heatmapSize.width - 100, height: 50}
-var heatmapScalePosition = { x : 5, y: 570}
+var heatmapScaleSize = { width : heatmapSize.width , height: 50}
+var heatmapScalePosition = { x : 0, y: 570}
 
 var histogramPosition = {x : 50, y: 820}
 var histogramSize = {width: 700, height : 180 }
@@ -48,7 +48,7 @@ var courtG = svg.append("g").attr("id", "court");
 var courtRadialOverlayG = svg.append("g").attr("id", "overlay")
 var heatmapScaleRootG = svg.append("g").attr("transform", `translate(${heatmapScalePosition.x}, ${heatmapScalePosition.y})`)
 var heatmapScaleG = heatmapScaleRootG.append("g")
-var heatmapScaleNoDataG = heatmapScaleRootG.append("g").attr("transform", "translate(" + (heatmapScaleSize.width + 15) + ",0)")
+var heatmapScaleNoDataG = heatmapScaleRootG.append("g").attr("transform", "translate(" + (heatmapScaleSize.width - 75) + ",0)")
 heatmapScaleNoDataG.append("rect").attr("id", "noData").attr("width", heatmapScaleSize.width / (numQuantiles + 1)).attr("height", 15).attr("fill", "grey").attr("stroke", "black")
 heatmapScaleNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(30)")
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
@@ -339,35 +339,41 @@ function drawCourt(stat) {
     scaleHeatmap = d3.scaleSequentialQuantile(quantiles, d3.interpolateBlues);
     courtG.selectAll("rect")
         .data(raster.flat().map((d, i) => {return {"val" : d, "index" : i};}))
-        .join("rect")
-        .attr("x", (d, i) => (i % resolutionX) * boxWidth )
-        .attr("y", (d, i) => Math.floor(i / resolutionX) * boxHeight )
-        .attr("width", boxWidth)
-        .attr("height", boxHeight)
-        .attr("fill", (d, i) => { 
-            if (chosenStat == ratio && attemptsRasterFlat[i] < ratioCutoff) {
-            // if (true) {
-                return "grey";
-            } else {
-                return scaleHeatmap(d.val);
-            }
-        })
-        .on("mouseover", handleCourtSquareMousover)
-        .on("mouseout", handleCourtSquareMouseout)
+        .join(
+            enter => enter.append("rect")
+                .attr("x", (d, i) => (i % resolutionX) * boxWidth )
+                .attr("y", (d, i) => Math.floor(i / resolutionX) * boxHeight )
+                .attr("width", boxWidth)
+                .attr("height", boxHeight)
+                .on("mouseover", handleCourtSquareMousover)
+                .on("mouseout", handleCourtSquareMouseout),
+            update => update
+                .call(update => update
+                    .transition()
+                    .duration(500)
+                    .attr("fill", (d, i) => { 
+                        if (chosenStat == ratio && attemptsRasterFlat[i] < ratioCutoff) {
+                        // if (true) {
+                            return "grey";
+                        } else {
+                            return scaleHeatmap(d.val);
+                        }
+                    })))
  
 }
 
 function drawHeatmapScale(stat) {
+    let widthAdjust = chosenStat == ratio ? -100 : 0
     heatmapScaleG.selectAll("rect")
         .data(quantiles)
         .join(
             enter => enter.append("rect")
-                .attr("width", heatmapScaleSize.width / quantiles.length)
                 .attr("height", 15)
-                .attr("x", (d, i) => (i) * heatmapScaleSize.width / quantiles.length)
                 .attr("y", 0)
                 .attr("stroke", "black"),
             update =>  update
+                .attr("x", (d, i) => (i) * (heatmapScaleSize.width + widthAdjust) / quantiles.length)
+                .attr("width", (heatmapScaleSize.width + widthAdjust) / quantiles.length)
                 .attr("fill", (d, i) => scaleHeatmap.range()[quantiles.length - i - 1])
                 .select("text")
         )
@@ -376,9 +382,9 @@ function drawHeatmapScale(stat) {
         .data(quantiles)
         .join(
             enter => enter.append("text")
-                .attr("transform", (d, i) => `translate(${(i * heatmapScaleSize.width / quantiles.length) + 15}, 25) rotate(30)`)
                 .attr("class", "legend_text"),
             update => update
+                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / quantiles.length) + 15}, 25) rotate(30)`)
                 .text((d, i) => {
                     if(chosenStat == ratio) {
                         return d3.format(",.3r")(quantiles[quantiles.length - i - 1]).substring(1)
@@ -406,9 +412,11 @@ function drawHistogram(stat) {
                 .on("mouseout", handleHistogramMouseout),
             update => update
                 .attr("x", (d, i) => i * histogramBarWidth)
-                .attr("y", (d, i) => histY(d))
                 .attr("width", histogramBarWidth)
-                .attr("height", (d, i) => isNaN(histY(0) - histY(d)) ? 0 : histY(0) - histY(d))
+                .call(update => update.transition()
+                    .duration(300)
+                    .attr("height", (d, i) => isNaN(histY(0) - histY(d)) ? 0 : histY(0) - histY(d))
+                    .attr("y", (d, i) => histY(d)))
         )
         
     let histYAxis = d3.axisLeft(histY)
