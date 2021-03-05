@@ -8,8 +8,7 @@
   .typeahead,
 .tt-query,
 .tt-hint {
-  width: 396px;
-  height: 30px;
+  width: 100%;
   padding: 8px 12px;
   font-size: 24px;
   line-height: 30px;
@@ -39,7 +38,7 @@
 }
 
 .tt-menu {
-  width: 422px;
+  width: 100%;
   margin: 12px 0;
   padding: 8px 0;
   background-color: #fff;
@@ -79,6 +78,10 @@
   font-size: 14px;
 }
 
+.twitter-typeahead {
+  width: 100%;
+}
+
 </style>
 <style>
     svg, canvas, #bk-svg {
@@ -91,6 +94,7 @@
     table {
       table-layout: fixed;
       word-wrap: break-word;
+      width: 100%;
     }
 
     #drawing-td {
@@ -98,6 +102,8 @@
     }
     
     #menu-td {
+      padding: 10px;
+      background-color: grey;
       vertical-align: initial;
       align-items: stretch;
     }
@@ -149,28 +155,40 @@
         <object id="bk-svg" data="Basketball-Court.svg" type="image/svg+xml"></object>
       </td>
       <td id="menu-td">
-        <input type="radio" class="btn-check" name="chosen-stat" id="shots-taken" autocomplete="off" checked>
-        <label class="btn btn-outline-primary" for="shots-taken">Shots Taken</label>
+        <div class="container">
+          <h1 style="text-align: center;">A&nbspDecade&nbspof Basketball&nbspShots</h1>
 
-        <input type="radio" class="btn-check" name="chosen-stat" id="shots-made" autocomplete="off">
-        <label class="btn btn-outline-primary" for="shots-made">Shots Made</label>
-        
-        <input type="radio" class="btn-check" name="chosen-stat" id="ratio" autocomplete="off">
-        <label class="btn btn-outline-primary" for="ratio">Shooting Percentage</label>
+          <div class="row">
+            <div class="col"> 
+              <input type="radio" class="btn-check" name="chosen-stat" id="shots-taken" autocomplete="off" checked>
+              <label class="btn btn-outline-primary w-100" for="shots-taken">Shots Taken</label>
+            </div>
 
-        <div id="player-search">
-          <input class="typeahead" type="text" placeholder="Player Name">
+            <div class="col"> 
+              <input type="radio" class="btn-check" name="chosen-stat" id="shots-made" autocomplete="off">
+              <label class="btn btn-outline-primary w-100" for="shots-made">Shots Made</label>
+            </div>
+            
+            <div class="col"> 
+              <input type="radio" class="btn-check" name="chosen-stat" id="ratio" autocomplete="off">
+              <label class="btn btn-outline-primary w-100" for="ratio">Shooting %</label>
+            </div>
+          </div>
+          <br>
+          <div id="player-search">
+            <input class="typeahead" type="text" placeholder="Player Name">
+          </div>
+          <div id="player-display">
+            <img id="player-img">
+          </div>
+          <div id="team-search">
+            <input class="typeahead" type="text" placeholder="Team Name">
+          </div>
+          <div id="team-display">
+            <img type="image/svg+xml" id="team-img">
+          </div>
+          <!-- https://jqueryui.com/slider/#range -->
         </div>
-        <div id="player-display">
-          <img id="player-img">
-        </div>
-        <div id="team-search">
-          <input class="typeahead" type="text" placeholder="Team Name">
-        </div>
-        <div id="team-display">
-          <img type="image/svg+xml" id="team-img">
-        </div>
-        <!-- https://jqueryui.com/slider/#range -->
       </td>
     </tr>
   </table>
