@@ -394,9 +394,9 @@ function drawHeatmapScale(stat) {
         .data(quantiles)
         .join(
             enter => enter.append("text")
-                .attr("class", "legend_text")
-                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / quantiles.length) + 15}, 25) rotate(20)`),
+                .attr("class", "legend_text"),
             update => update
+                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / quantiles.length) + 15}, 25) rotate(20)`)
                 .text((d, i) => {
                     if(chosenStat == ratio) {
                         return d3.format(",.3r")(quantiles[quantiles.length - i - 1]).substring(1)
