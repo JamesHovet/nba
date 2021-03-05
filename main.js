@@ -15,10 +15,10 @@ var boxWidth = heatmapSize.width / resolutionX
 var boxHeight = heatmapSize.height / resolutionY
 
 var heatmapScaleSize = { width : heatmapSize.width , height: 50}
-var heatmapScalePosition = { x : 0, y: 570}
+var heatmapScalePosition = { x : 0, y: 590}
 
-var histogramPosition = {x : 50, y: 820}
-var histogramSize = {width: 700, height : 180 }
+var histogramPosition = {x : 60, y: 820}
+var histogramSize = {width: 740, height : 180 }
 var histogramBarWidth = histogramSize.width / 35
 
 var courtYDomain = [-50, 300]
@@ -47,14 +47,17 @@ var svg = svgRaw.append("g")
 var courtG = svg.append("g").attr("id", "court");
 var courtRadialOverlayG = svg.append("g").attr("id", "overlay")
 var heatmapScaleRootG = svg.append("g").attr("transform", `translate(${heatmapScalePosition.x}, ${heatmapScalePosition.y})`)
+var heatmapScaleLabel = heatmapScaleRootG.append("g").attr("transform", `translate(${heatmapScaleSize.width / 2}, ${-8})`).append("text").attr("text-anchor", "middle")
 var heatmapScaleG = heatmapScaleRootG.append("g")
 var heatmapScaleNoDataG = heatmapScaleRootG.append("g").attr("transform", "translate(" + (heatmapScaleSize.width - 75) + ",0)")
 heatmapScaleNoDataG.append("rect").attr("id", "noData").attr("width", heatmapScaleSize.width / (numQuantiles + 1)).attr("height", 15).attr("fill", "grey").attr("stroke", "black")
-heatmapScaleNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(30)")
+heatmapScaleNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(20)")
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
 var histBarsG = histG.append("g")
 var histYAxisG = histG.append("g").attr("transform", `translate(0, ${0})`)
-let histXAxisG = histG.append("g").attr("transform", `translate(0, ${histogramSize.height})`)
+var histYAxisLabel = histG.append("text").attr("transform", `translate(${-40}, ${histogramSize.height / 2}) rotate(-90)`).attr("text-anchor", "middle").text("hist y")
+var histXAxisG = histG.append("g").attr("transform", `translate(0, ${histogramSize.height})`)
+var histXAxisLabel = histG.append("text").attr("transform", `translate(${histogramSize.width / 2}, ${histogramSize.height + 30})`).attr("text-anchor", "middle").text("Distance")
 var progressBarG = svg.append("g").attr("id", "progressBar");
 
 
@@ -92,22 +95,25 @@ var rows = undefined;
 var attempts = {
     raster : emptySquares(),
     hist : emptyHist(),
-    unit : "Shots",
-    format : d3.format(",")
+    unit : "Shots Taken",
+    format : d3.format(","),
+    name: "Shots Taken"
 }
 
 var pts = {
     raster : emptySquares(),
     hist : emptyHist(),
-    unit : "Points",
-    format : d3.format(",")
+    unit : "Shots Made",
+    format : d3.format(","),
+    name: "Shots Made"
 }
 
 var ratio = {
     raster : emptySquares(),
     hist : emptyHist(),
     unit : "Shooting Percentage",
-    format : d3.format(".3f")
+    format : d3.format(".3f"),
+    name : "Shooting Percentage"
 }
 
 var chosenStat = attempts;
@@ -196,7 +202,7 @@ for(i = 0; i < 35; i++) {
 function doesPassFilter(d) {
     // return d[col.SEASON] == 2019;
     // return d[col.TEAM_ID] == 38;
-    return d[col.PLAYER_ID] == 2544; // lebron
+    // return d[col.PLAYER_ID] == 2544; // lebron
     // return d[col.PLAYER_ID] == 201939; // curry
     // return d[col.ACTION_TYPE] == actionStringToId["Layup Shot"];
     return true;
@@ -283,9 +289,7 @@ function ready(compiled) {
     drawLoop();    
 }
 
-var valid = true;
 function invalidate() {
-    valid = false;
     currentIndex = 0
     emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
     emptyHist = function() {return new Array(35).fill(0);}
@@ -301,7 +305,6 @@ function invalidate() {
     ratio.hist = emptyHist();
     clearCanvas()
     courtG.selectAll("rect").data([]).join("rect")
-    valid = true;
 }
 
 function changeDisplayedStat(newStat) {
@@ -313,7 +316,7 @@ function changeDisplayedStat(newStat) {
 
 var currentIndex = 0;
 function drawLoop(){
-    if (valid && currentIndex < rows.length) {
+    if (currentIndex < rows.length) {
         processSlice(rows.slice(currentIndex, currentIndex + sliceSize));
         currentIndex += sliceSize;
 
@@ -370,6 +373,8 @@ function drawCourt(stat) {
 }
 
 function drawHeatmapScale(stat) {
+    heatmapScaleLabel.text(chosenStat.name);
+    histYAxisLabel.text(chosenStat.name);
     let widthAdjust = chosenStat == ratio ? -100 : 0
     heatmapScaleG.selectAll("rect")
         .data(quantiles)
@@ -389,9 +394,9 @@ function drawHeatmapScale(stat) {
         .data(quantiles)
         .join(
             enter => enter.append("text")
-                .attr("class", "legend_text"),
+                .attr("class", "legend_text")
+                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / quantiles.length) + 15}, 25) rotate(20)`),
             update => update
-                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / quantiles.length) + 15}, 25) rotate(30)`)
                 .text((d, i) => {
                     if(chosenStat == ratio) {
                         return d3.format(",.3r")(quantiles[quantiles.length - i - 1]).substring(1)
@@ -433,6 +438,7 @@ function drawHistogram(stat) {
         )
         
     let histYAxis = d3.axisLeft(histY)
+        .tickFormat(chosenStat == ratio ? d3.format(".3f") : d3.format("~s"))
         .ticks(15)
     histYAxisG.call(histYAxis);
 
@@ -596,7 +602,7 @@ var bloodhoundPlayers = new Bloodhound({
     local: players,
     identify: (player) => player.name,
     queryTokenizer : Bloodhound.tokenizers.nonword,
-    datumTokenizer : (player) => {console.log(Bloodhound.tokenizers.nonword(player.name)); return Bloodhound.tokenizers.nonword(player.name)},
+    datumTokenizer : (player) => {return Bloodhound.tokenizers.nonword(player.name)},
 })
 
 
