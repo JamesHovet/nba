@@ -105,7 +105,7 @@
       left: 10px;
     }
 
-    h3 {
+    h4 {
       padding-top: 5px;
     }
 
@@ -116,7 +116,7 @@
     }
 
     #drawing-td {
-      width: 820px;
+      width: 720px;
     }
     
     #menu-td {
@@ -193,7 +193,7 @@
           <h1 style="text-align: center;">A&nbspDecade&nbspof Basketball&nbspShots</h1>
           <h5 style="text-align: center;">By James Hovet</h5>
 
-          <div class="row">
+          <div class="row" style="margin-bottom: 0.5rem;">
             <div class="col"> 
               <input type="radio" class="btn-check" name="chosen-stat" id="shots-taken" autocomplete="off" checked>
               <label class="btn btn-outline-primary w-100" for="shots-taken">Shots Taken</label>
@@ -209,7 +209,6 @@
               <label class="btn btn-outline-primary w-100" for="ratio">Shooting %</label>
             </div>
           </div>
-          <br>
           <div class="row">
             <div class="col"> 
               <input type="radio" class="btn-check" name="display-mode" id="heatmap-radio" autocomplete="off" checked>
@@ -222,8 +221,8 @@
             </div>
          </div>
 
-          <h3 style="text-align: center;">Displaying <span id="num-passed-filter-span">0</span> of 2,009,324 Shots</h3>
-          <h3>Filter by Player:</h3>
+          <h5 style="text-align: center;">Displaying <span id="num-passed-filter-span">0</span> of 2,009,324 Shots</h4>
+          <h4>Filter by Player:</h4>
           <div class="row">
             <div id="player-search" class="col">
               <input class="typeahead" type="text" placeholder="Player Name">
@@ -234,7 +233,7 @@
             </div>
           </div>
 
-          <h3>Filter by Team:</h3>
+          <h4>Filter by Team:</h4>
           <div class="row">
             <div id="team-search" class="col">
               <input class="typeahead" type="text" placeholder="Team Name">
@@ -245,7 +244,7 @@
             </div>
           </div>
 
-          <h3>Filter by Season:</h3>
+          <h4>Filter by Season:</h4>
           <div class="row">
             <div id="season-slider-col" class="col">
               <h5 style="text-align: center;" id="season-slider-display">2010-2029 Seasons</h5>
@@ -254,7 +253,7 @@
             </div>
           </div>
 
-          <h3>Filter by Shot Type:</h3>
+          <h4>Filter by Shot Type:</h4>
           <div class="row" id="action-type-tag-div">
             <div style="margin-bottom: 5px;" id="action-type-tags-colll" class="col">
               <pre id="action-type-tag-area"></pre>

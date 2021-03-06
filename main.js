@@ -1,5 +1,5 @@
-var width = 800;
-var height = 900;
+var width = 700;
+var height = 760;
 
 var resolutionX = 80;
 var resolutionY = 56;
@@ -9,16 +9,16 @@ function setResolutionFactor(factor) {
     resolutionY = Math.floor(56 * factor);
 }
 
-var heatmapSize = { width: 800, height: (800) * (350 / 500)}
+var heatmapSize = { width: 700, height: (700) * (350 / 500)}
 
 var boxWidth = heatmapSize.width / resolutionX
 var boxHeight = heatmapSize.height / resolutionY
 
 var heatmapScaleSize = { width : heatmapSize.width , height: 50}
-var heatmapScalePosition = { x : 0, y: 590}
+var heatmapScalePosition = { x : 0, y: 515}
 
-var histogramPosition = {x : 60, y: 820}
-var histogramSize = {width: 740, height : 180 }
+var histogramPosition = {x : 60, y: 720}
+var histogramSize = {width: 640, height : 150 }
 var histogramBarWidth = histogramSize.width / 35
 
 var courtYDomain = [-50, 300]
@@ -880,7 +880,7 @@ function initializeTypeaheads(){
             invalidateFilter();
             $('#clear-team').attr('hidden', false);
             let info = teams[+suggestion];
-            $("#team-img").attr("src", `https://www.nba.com/stats/media/img/teams/logos/${info["abbrev"]}_logo.svg`).attr('width', 260) // match player
+            $("#team-img").attr("src", `https://www.nba.com/stats/media/img/teams/logos/${info["abbrev"]}_logo.svg`).attr('width', 130) // match player
         }
     });
     
@@ -900,7 +900,7 @@ function initializeTypeaheads(){
             filterCurrentPlayer = suggestion.id;
             invalidateFilter();
             $('#clear-player').attr('hidden', false);
-            $("#player-img").attr("src", `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${suggestion.id}.png`)
+            $("#player-img").attr("src", `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${suggestion.id}.png`).attr("width", 130)
         }
     });
 
