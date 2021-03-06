@@ -4,8 +4,13 @@
 <head>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> -->
+<script
+			  src="https://code.jquery.com/jquery-3.6.0.min.js"
+			  integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+			  crossorigin="anonymous"></script>
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<link rel="stylesheet" href="./jquery.tag-editor.css">
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <style>
   .typeahead,
@@ -84,6 +89,12 @@
 
 .twitter-typeahead {
   width: 100%;
+}
+
+  /* scrollable_dropdown */
+.tt-open {
+  max-height: 150px !important;
+  overflow-y: auto !important;
 }
 
 </style>
@@ -243,12 +254,26 @@
             </div>
           </div>
 
-          <!-- https://jqueryui.com/slider/#range -->
+          <h3>Filter by Shot Type:</h3>
+          <div class="row" id="action-type-tag-div">
+            <div style="margin-bottom: 5px;" id="action-type-tags-colll" class="col">
+              <pre id="action-type-tag-area"></pre>
+            </div>
+          </div>
+          <div class="row">
+            <div id="action-type-col" class="col">
+              <div id="action-type-search">
+                <input class="typeahead" type="text" placeholder="Shot Type">
+              </div>
+            </div>
+          </div>
+
           <div class="row" id="apply-filters-row">
             <div class="col"> 
               <button class="btn w-100 btn-outline-danger" id="apply-filters" for="apply">Apply Filters</button>
             </div>
           </div>
+
         </div>
       </td>
     </tr>
@@ -256,7 +281,8 @@
 <div id="histogramMouseover" style="opacity: 0; top: 0px; left: 0px;"></div>  
 <div id="courtMouseover" style="opacity: 0; top: 0px; left: 0px;"></div>  
 </body>
-
+<script src="./jquery.caret.min.js"></script>
+<script src="./jquery.tag-editor.min.js"></script>
 <script src="./typeahead.js"></script>
 <script src="https://d3js.org/d3.v6.min.js"></script>
 <script src="./player_data.js"></script>

@@ -101,8 +101,8 @@ var col = {
 // https://secure.espn.com/combiner/i?img=/i/teamlogos/nba/500/lal.png
 var idToTeams = {55: 'PHI', 38: 'BOS', 44: 'GSW', 60: 'OKC', 49: 'MIL', 66: 'CHA', 51: 'BKN', 65: 'DET', 54: 'IND', 63: 'MEM', 48: 'MIA', 53: 'ORL', 37: 'ATL', 52: 'NYK', 61: 'TOR', 39: 'CLE', 40: 'NOP', 45: 'HOU', 59: 'SAS', 50: 'MIN', 58: 'SAC', 62: 'UTA', 46: 'LAC', 43: 'DEN', 42: 'DAL', 56: 'PHX', 41: 'CHI', 64: 'WAS', 47: 'LAL', 57: 'POR'}
 var teamsToIds = {'PHI': 55, 'BOS': 38, 'GSW': 44, 'OKC': 60, 'MIL': 49, 'CHA': 66, 'BKN': 51, 'DET': 65, 'IND': 54, 'MEM': 63, 'MIA': 48, 'ORL': 53, 'ATL': 37, 'NYK': 52, 'TOR': 61, 'CLE': 39, 'NOP': 40, 'HOU': 45, 'SAS': 59, 'MIN': 50, 'SAC': 58, 'UTA': 62, 'LAC': 46, 'DEN': 43, 'DAL': 42, 'PHX': 56, 'CHI': 41, 'WAS': 64, 'LAL': 47, 'POR': 57}
-var actionIdToString = { "0": "Layup Shot", "1": "Pullup Jump shot", "2": "Step Back Jump shot", "3": "Driving Layup Shot", "4": "Jump Shot", "5": "Reverse Layup Shot", "6": "Alley Oop Dunk Shot", "8": "Driving Dunk Shot", "9": "Turnaround Jump Shot", "10": "Running Jump Shot", "11": "Turnaround Fadeaway shot", "12": "Hook Shot", "14": "Dunk Shot", "16": "Fadeaway Jump Shot", "17": "Floating Jump shot", "19": "Tip Shot", "21": "Putback Layup Shot", "22": "Turnaround Hook Shot", "23": "Driving Reverse Layup Shot", "24": "Jump Bank Shot", "25": "Running Layup Shot", "28": "Driving Finger Roll Layup Shot", "50": "Driving Floating Jump Shot", "53": "Cutting Layup Shot", "54": "Tip Layup Shot", "56": "Cutting Dunk Shot", "-1": "No Shot"}
-var actionStringToId = { "Layup Shot": "0", "Pullup Jump shot": "1", "Step Back Jump shot": "2", "Driving Layup Shot": "3", "Jump Shot": "4", "Reverse Layup Shot": "5", "Alley Oop Dunk Shot": "6", "Driving Dunk Shot": "8", "Turnaround Jump Shot": "9", "Running Jump Shot": "10", "Turnaround Fadeaway shot": "11", "Hook Shot": "12", "Dunk Shot": "14", "Fadeaway Jump Shot": "16", "Floating Jump shot": "17", "Tip Shot": "19", "Putback Layup Shot": "21", "Turnaround Hook Shot": "22", "Driving Reverse Layup Shot": "23", "Jump Bank Shot": "24", "Running Layup Shot": "25", "Driving Finger Roll Layup Shot": "28", "Driving Floating Jump Shot": "50", "Cutting Layup Shot": "53", "Tip Layup Shot": "54", "Cutting Dunk Shot": "56", "No Shot": "-1"}
+var actionIdToString = { "0": "Layup Shot", "1": "Pullup Jump shot", "2": "Step Back Jump shot", "3": "Driving Layup Shot", "4": "Jump Shot", "5": "Reverse Layup Shot", "6": "Alley Oop Dunk Shot", "8": "Driving Dunk Shot", "9": "Turnaround Jump Shot", "10": "Running Jump Shot", "11": "Turnaround Fadeaway shot", "12": "Hook Shot", "14": "Dunk Shot", "16": "Fadeaway Jump Shot", "17": "Floating Jump shot", "19": "Tip Shot", "21": "Putback Layup Shot", "22": "Turnaround Hook Shot", "23": "Driving Reverse Layup Shot", "24": "Jump Bank Shot", "25": "Running Layup Shot", "28": "Driving Finger Roll Layup Shot", "50": "Driving Floating Jump Shot", "53": "Cutting Layup Shot", "54": "Tip Layup Shot", "56": "Cutting Dunk Shot", "-1": "Other"}
+var actionStringToId = { "Layup Shot": "0", "Pullup Jump shot": "1", "Step Back Jump shot": "2", "Driving Layup Shot": "3", "Jump Shot": "4", "Reverse Layup Shot": "5", "Alley Oop Dunk Shot": "6", "Driving Dunk Shot": "8", "Turnaround Jump Shot": "9", "Running Jump Shot": "10", "Turnaround Fadeaway shot": "11", "Hook Shot": "12", "Dunk Shot": "14", "Fadeaway Jump Shot": "16", "Floating Jump shot": "17", "Tip Shot": "19", "Putback Layup Shot": "21", "Turnaround Hook Shot": "22", "Driving Reverse Layup Shot": "23", "Jump Bank Shot": "24", "Running Layup Shot": "25", "Driving Finger Roll Layup Shot": "28", "Driving Floating Jump Shot": "50", "Cutting Layup Shot": "53", "Tip Layup Shot": "54", "Cutting Dunk Shot": "56", "Other": "-1"}
 
 var emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
 var emptyHist = function() {return new Array(35).fill(0);}
@@ -244,6 +244,7 @@ var filterFunc = (d) => {
 
 function makeFilter() {
     // TODO: if there's really nothing left, fix the behavior where you change a filter item, then change it back, but the filter is still invalid to the app
+    let allowedShotTypes = actionTypeTagEditor.tagEditor('getTags')[0].tags.map((str) => +actionStringToId[str]);
     return function(d) {
         if (filterCurrentPlayer != null && d[col.PLAYER_ID] != filterCurrentPlayer){
             return false;
@@ -253,6 +254,10 @@ function makeFilter() {
         }
         if(d[col.SEASON] < filterSeasonLow || d[col.SEASON] >= filterSeasonHigh){
             return false;
+        }
+
+        if (allowedShotTypes.length != 0 && !allowedShotTypes.includes(d[col.ACTION_TYPE])){
+            return false
         }
         return true;
     }
@@ -373,6 +378,7 @@ function ready(compiled) {
     svgRaw.transition().duration(2000).style("opacity", 1)
     bkSVG.transition().duration(2000).style("opacity", 1)
 
+    initializeTagEditor();
     initializeTypeaheads();
     initializeSliders();
 
@@ -833,9 +839,29 @@ var substringMatcherTeams = function(teamDict) {
     };
 };
 
+var substringMatcherActionType = function() {
+    return function findMatches(q, cb) {
+        let currentTags = actionTypeTagEditor.tagEditor('getTags')[0].tags;
+        let options = Object.keys(actionIdToString).filter((key) => !currentTags.includes(actionIdToString[key]))
+        if(q == ''){
+            cb(options);
+        } else {
+            var matches;
+            matches = [];
+            substrRegex = new RegExp(q, 'i');
+            $.each(options, function(i, key) {
+                if (substrRegex.test(actionIdToString[key])) {
+                    matches.push(key);
+                }
+            });
+            cb(matches);
+        }
+    };
+};
 
 var player_search_typeahead = $('#player-search .typeahead');
 var team_search_typeahead = $('#team-search .typeahead');
+var action_type_typeahead = $('#action-type-col .typeahead')
 function initializeTypeaheads(){
     team_search_typeahead.typeahead({
         hint: true,
@@ -878,6 +904,25 @@ function initializeTypeaheads(){
         }
     });
 
+    action_type_typeahead.typeahead({
+            hint: true,
+            highlight: true,
+            minLength: 0
+        },
+        {
+            name: 'action_type',
+            source: substringMatcherActionType(),
+            display: (key) => actionIdToString[key],
+            limit: 999
+        })
+
+    action_type_typeahead.bind('typeahead:select', function(ev, suggestion) {
+        invalidateFilter();
+        actionTypeTagEditor.tagEditor('addTag', actionIdToString[+suggestion])
+        action_type_typeahead.typeahead('val', '');
+        action_type_typeahead.focus();
+    });
+
 }
 var seasonSliderDisplay = $('#season-slider-display')
 function handleSeasonSlider(event, ui){
@@ -898,6 +943,15 @@ function initializeSliders(){
         max: 2020,
         values: [2010, 2020],
         slide: handleSeasonSlider
+    })
+}
+
+var actionTypeTagEditor;
+function initializeTagEditor(){
+    actionTypeTagEditor = $('#action-type-tag-area').tagEditor({
+        forceLowercase : false,
+        sortable: false,
+        beforeTagDelete: () => {invalidateFilter()}
     })
 }
 
