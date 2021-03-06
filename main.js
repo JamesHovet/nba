@@ -64,6 +64,11 @@ var heatmapScaleG = heatmapScaleRootG.append("g")
 var heatmapScaleNoDataG = heatmapScaleRootG.append("g").attr("transform", "translate(" + (heatmapScaleSize.width - 75) + ",0)")
 heatmapScaleNoDataG.append("rect").attr("id", "noData").attr("width", heatmapScaleSize.width / (numQuantiles + 1)).attr("height", 15).attr("fill", "grey").attr("stroke", "black")
 var heatmapScaleNoDataGText = heatmapScaleNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(20)")
+var discreteLegendRootG = svg.append("g").attr("transform", `translate(${heatmapScalePosition.x}, ${heatmapScalePosition.y})`).style("opacity", 0);
+var discreteLegendG = discreteLegendRootG.append("g");
+var discreteLegendNoDataG = discreteLegendRootG.append("g").attr("transform", "translate(" + (heatmapScaleSize.width - 75) + ",0)")
+discreteLegendNoDataG.append("rect").attr("id", "noData").attr("width", heatmapScaleSize.width / (numQuantiles + 1)).attr("height", 15).attr("fill", "grey").attr("stroke", "black")
+var discreteLegendNoDataGText = discreteLegendNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(20)")
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
 var histBarsG = histG.append("g")
 var histYAxisG = histG.append("g").attr("transform", `translate(0, ${0})`)
@@ -112,7 +117,8 @@ var attempts = {
     unit : "Shots Taken",
     format : d3.format(","),
     name: "Shots Taken",
-    canvas : d3.select("#canvas-attempts")
+    canvas : d3.select("#canvas-attempts"),
+    discreteLegendData : [{"color" : "blue", "name": "Shot Taken"}]
 }
 
 var pts = {
@@ -121,7 +127,8 @@ var pts = {
     unit : "Shots Made",
     format : d3.format(","),
     name: "Shots Made",
-    canvas : d3.select("#canvas-pts")
+    canvas : d3.select("#canvas-pts"),
+    discreteLegendData : [{"color" : "blue", "name": "Shot Made"}]
 
 }
 
@@ -131,7 +138,8 @@ var ratio = {
     unit : "Shooting Percentage",
     format : d3.format(".3f"),
     name : "Shooting Percentage",
-    canvas : d3.select("#canvas-ratio")
+    canvas : d3.select("#canvas-ratio"),
+    discreteLegendData : [{"color" : "blue", "name": "Shot Made"}, {"color" : "red", "name": "Shot Missed"}]
 
 }
 
@@ -283,7 +291,6 @@ function processSlice(slice, filter) {
     let shotMissedColor = `rgba(255, 0, 0, ${ratioOpacity})`
     attemptsContext.fillStyle = shotMadeColor;
     ptsContext.fillStyle = shotMadeColor;
-    console.log("opacity", ratioOpacity)
     slice.forEach(d => {
         let canvasX = scaleXLinear(d[col.LOC_X] + (Math.random() * jitterStrength) - halfJitterStrength)
         let canvasY = scaleYLinear(d[col.LOC_Y] + (Math.random() * jitterStrength) - halfJitterStrength)
@@ -407,7 +414,7 @@ function invalidate() {
 function changeDisplayedStat(newStat) {
     chosenStat = newStat;
     drawCourt(chosenStat);
-    drawHeatmapScale(chosenStat)
+    drawLegends(chosenStat)
     drawHistogram(chosenStat)
     d3.selectAll('canvas').style("opacity", 0)
     chosenStat.canvas.style("opacity", 1)
@@ -423,7 +430,7 @@ function drawLoop(){
 
         drawCourt(chosenStat);
 
-        drawHeatmapScale(chosenStat);
+        drawLegends(chosenStat);
 
         drawHistogram(chosenStat)
 
@@ -473,7 +480,7 @@ function drawCourt(stat) {
  
 }
 
-function drawHeatmapScale(stat) {
+function drawLegends(stat) {
     heatmapScaleLabel.text(chosenStat.name);
     histYAxisLabel.text(chosenStat.name);
     let widthAdjust = chosenStat == ratio ? -100 : 0
@@ -510,8 +517,31 @@ function drawHeatmapScale(stat) {
                     }
                 })
         )
+    
+
+    let discreteLegendData = chosenStat.discreteLegendData;
+    discreteLegendG.selectAll("circle")
+        .data(discreteLegendData)
+        .join("circle")
+        .attr("cx", (d, i) => (i + 1) * ((heatmapScaleSize.width) / (discreteLegendData.length + 1)))
+        .attr("cy", 0)
+        .attr("fill", (d) => d.color)
+        .attr("r", 5)
+
+    discreteLegendG.selectAll("text")
+        .data(discreteLegendData)
+        .join("text")
+        .attr("x", (d, i) => (i + 1) * ((heatmapScaleSize.width) / (discreteLegendData.length + 1)))
+        .attr("y", 25)
+        .attr("text-anchor", "middle")
+        .text((d) => d.name);
+
     heatmapScaleNoDataG.attr("opacity", chosenStat == ratio ? 1 : 0)
     heatmapScaleNoDataGText.text("n < " + ratioCutoff);
+    discreteLegendNoDataG.attr("opacity", chosenStat == ratio ? 1 : 0)
+    discreteLegendNoDataGText.text("n < " + ratioCutoff);
+
+
 }
 
 function drawHistogram(stat) {
@@ -680,6 +710,7 @@ function setToHeatmap(){
     d3.select('#canvases').style("opacity", 0);
     courtG.style("opacity", 1);
     heatmapScaleRootG.style("opacity", 1);
+    discreteLegendRootG.style("opacity", 0);
 }
 
 function setToDiscrete(){
@@ -687,6 +718,7 @@ function setToDiscrete(){
     d3.select('#canvases').style("opacity", 1);
     courtG.style("opacity", 0);
     heatmapScaleRootG.style("opacity", 0);
+    discreteLegendRootG.style("opacity", 1);
 }
 
 $('#shots-taken').on('click', (e) => {changeDisplayedStat(attempts)})
