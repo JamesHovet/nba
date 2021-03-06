@@ -203,6 +203,8 @@ var filterIsUpToDate = true;
 
 var filterCurrentPlayer = null;
 var filterCurrentTeam = null;
+var filterSeasonLow = 2010;
+var filterSeasonHigh = 2020; // python style intervals
 
 var filterFunc = (d) => {
     // return d[col.SEASON] == 2019;
@@ -220,6 +222,9 @@ function makeFilter() {
             return false;
         }
         if(filterCurrentTeam != null && d[col.TEAM_ID] != filterCurrentTeam){
+            return false;
+        }
+        if(d[col.SEASON] < filterSeasonLow || d[col.SEASON] >= filterSeasonHigh){
             return false;
         }
         return true;
@@ -324,6 +329,7 @@ function ready(compiled) {
     bkSVG.transition().duration(2000).style("opacity", 1)
 
     initializeTypeaheads();
+    initializeSliders();
 
     let histXAxis = d3.axisBottom(histX)
         .tickValues([0, 5, 10, 15, 20, 25, 30, 35])
@@ -464,6 +470,9 @@ function drawHeatmapScale(stat) {
 }
 
 function drawHistogram(stat) {
+    if(numPassedFilter == 0){
+        return;
+    }
     hist = stat.hist;
     histY = histY.domain([0,d3.max(hist)])
     histBarsG.selectAll("rect")
@@ -519,10 +528,16 @@ function drawProgressBar() {
 
 function applyFilters(){
 
-    setResolutionFactor(1.0);
-    if(filterCurrentTeam != null){
+    setResolutionFactor(0.8);
+
+    if(filterSeasonHigh - filterSeasonLow < 5){
         setResolutionFactor(0.6);
     }
+
+    if(filterCurrentTeam != null){
+        setResolutionFactor(0.45);
+    }
+
     if(filterCurrentPlayer != null){
         setResolutionFactor(0.3);
     }
@@ -746,6 +761,27 @@ function initializeTypeaheads(){
         }
     });
 
+}
+var seasonSliderDisplay = $('#season-slider-display')
+function handleSeasonSlider(event, ui){
+    let low = ui.values[0];
+    let high = ui.values[1];
+    seasonSliderDisplay.text(`${low}-${high} Season${high - low == 1 ? "" : "s"}`)
+    if(low != filterSeasonLow || high != filterSeasonHigh){
+        filterSeasonLow = low;
+        filterSeasonHigh = high;
+        invalidateFilter();
+    }
+}
+
+function initializeSliders(){
+    $('#season-slider-range').slider({
+        range: true,
+        min: 2010,
+        max: 2020,
+        values: [2010, 2020],
+        slide: handleSeasonSlider
+    })
 }
 
 //----------------------------------------------------------------------------------------------------------------------
