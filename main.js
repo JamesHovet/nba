@@ -51,7 +51,7 @@ var heatmapScaleLabel = heatmapScaleRootG.append("g").attr("transform", `transla
 var heatmapScaleG = heatmapScaleRootG.append("g")
 var heatmapScaleNoDataG = heatmapScaleRootG.append("g").attr("transform", "translate(" + (heatmapScaleSize.width - 75) + ",0)")
 heatmapScaleNoDataG.append("rect").attr("id", "noData").attr("width", heatmapScaleSize.width / (numQuantiles + 1)).attr("height", 15).attr("fill", "grey").attr("stroke", "black")
-heatmapScaleNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(20)")
+var heatmapScaleNoDataGText = heatmapScaleNoDataG.append("text").attr("class", "legend_text").text("n < " + ratioCutoff).attr("transform", "translate(15, 25) rotate(20)")
 var histG = svg.append("g").attr("id", "hist").attr("transform", `translate(${histogramPosition.x}, ${histogramPosition.y - histogramSize.height})`);
 var histBarsG = histG.append("g")
 var histYAxisG = histG.append("g").attr("transform", `translate(0, ${0})`)
@@ -467,6 +467,7 @@ function drawHeatmapScale(stat) {
                 })
         )
     heatmapScaleNoDataG.attr("opacity", chosenStat == ratio ? 1 : 0)
+    heatmapScaleNoDataGText.text("n < " + ratioCutoff);
 }
 
 function drawHistogram(stat) {
@@ -529,17 +530,25 @@ function drawProgressBar() {
 function applyFilters(){
 
     setResolutionFactor(0.8);
+    ratioCutoff = 50;
 
     if(filterSeasonHigh - filterSeasonLow < 5){
         setResolutionFactor(0.6);
     }
 
     if(filterCurrentTeam != null){
+        ratioCutoff = 35;
         setResolutionFactor(0.45);
     }
 
+    if (filterSeasonHigh - filterSeasonLow < 2){
+        ratioCutoff = 25;
+        setResolutionFactor(0.35);
+    }
+
     if(filterCurrentPlayer != null){
-        setResolutionFactor(0.3);
+        setResolutionFactor(0.2);
+        ratioCutoff = 20;
     }
 
     filterFunc = makeFilter();
