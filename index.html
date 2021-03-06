@@ -89,7 +89,6 @@
 </style>
 <style>
     svg, canvas, #bk-svg {
-      opacity: 0;
       position: absolute;
       top: 10px;        
       left: 10px;
@@ -166,7 +165,11 @@
   <table>
     <tr>
       <td id="drawing-td">
-        <canvas></canvas>
+        <div id="canvases" style="opacity: 0;">
+          <canvas style="opacity: 1;" id="canvas-attempts"></canvas>
+          <canvas style="opacity: 0;" id="canvas-pts"></canvas>
+          <canvas style="opacity: 0;" id="canvas-ratio"></canvas>
+        </div>
         <svg>
           <style>
             .legend_text {font: 11px sans-serif;}
@@ -195,6 +198,18 @@
               <label class="btn btn-outline-primary w-100" for="ratio">Shooting %</label>
             </div>
           </div>
+          <br>
+          <div class="row">
+            <div class="col"> 
+              <input type="radio" class="btn-check" name="display-mode" id="heatmap-radio" autocomplete="off" checked>
+              <label class="btn btn-outline-primary w-100" for="heatmap-radio">Heatmap</label>
+            </div>
+
+            <div class="col"> 
+              <input type="radio" class="btn-check" name="display-mode" id="discrete-radio" autocomplete="off">
+              <label class="btn btn-outline-primary w-100" for="discrete-radio">Individual Shots</label>
+            </div>
+         </div>
 
           <h3 style="text-align: center;">Displaying <span id="num-passed-filter-span">0</span> of 2,009,324 Shots</h3>
           <h3>Filter by Player:</h3>

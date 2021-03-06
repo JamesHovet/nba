@@ -23,19 +23,31 @@ var histogramBarWidth = histogramSize.width / 35
 
 var courtYDomain = [-50, 300]
 
-var sliceSize = 50000;
+var sliceSize = 25000;
 
 var ratioCutoff = 50;
-
+var ratioOpacity = 0.1;
 var numQuantiles = 13;
+
+var mode = "heatmap"
 
 var drawingTd = d3.select("#drawing-td")
     .attr("width", width)
     .attr("height", height)
-var chart = d3.select("canvas");
-chart.attr("width", heatmapSize.width)
+
+var attemptsCanvas = d3.select("#canvas-attempts")
+    .attr("width", heatmapSize.width)
     .attr("height", heatmapSize.height)
-var context = chart.node().getContext("2d");
+var attemptsContext = attemptsCanvas.node().getContext("2d");
+var ptsCanvas = d3.select("#canvas-pts")
+    .attr("width", heatmapSize.width)
+    .attr("height", heatmapSize.height)
+var ptsContext = ptsCanvas.node().getContext("2d");
+var ratioCanvas = d3.select("#canvas-ratio")
+    .attr("width", heatmapSize.width)
+    .attr("height", heatmapSize.height)
+var ratioContext = ratioCanvas.node().getContext("2d");
+
 var svgRaw = d3.select("svg")
     .attr("width", width)
     .attr("height", height)
@@ -91,13 +103,16 @@ var emptySquares = function() {return new Array(resolutionY).fill(0).map(() => n
 var emptyHist = function() {return new Array(35).fill(0);}
 
 var rows = undefined;
+var filtered = undefined;
+var numProcessed = 0;
 
 var attempts = {
     raster : emptySquares(),
     hist : emptyHist(),
     unit : "Shots Taken",
     format : d3.format(","),
-    name: "Shots Taken"
+    name: "Shots Taken",
+    canvas : d3.select("#canvas-attempts")
 }
 
 var pts = {
@@ -105,7 +120,9 @@ var pts = {
     hist : emptyHist(),
     unit : "Shots Made",
     format : d3.format(","),
-    name: "Shots Made"
+    name: "Shots Made",
+    canvas : d3.select("#canvas-pts")
+
 }
 
 var ratio = {
@@ -113,7 +130,9 @@ var ratio = {
     hist : emptyHist(),
     unit : "Shooting Percentage",
     format : d3.format(".3f"),
-    name : "Shooting Percentage"
+    name : "Shooting Percentage",
+    canvas : d3.select("#canvas-ratio")
+
 }
 
 var chosenStat = attempts;
@@ -257,31 +276,50 @@ function clearTeam(){
 // Parse new data
 //----------------------------------------------------------------------------------------------------------------------
 var numPassedFilter = 0;
+let jitterStrength = 3;
+let halfJitterStrength = jitterStrength / 2;
 function processSlice(slice, filter) {
-    context.fillStyle = "rgba(255, 0, 0, 1)";
+    let shotMadeColor = `rgba(0, 0, 255, ${ratioOpacity})`
+    let shotMissedColor = `rgba(255, 0, 0, ${ratioOpacity})`
+    attemptsContext.fillStyle = shotMadeColor;
+    ptsContext.fillStyle = shotMadeColor;
+    console.log("opacity", ratioOpacity)
     slice.forEach(d => {
-        if( filterFunc(d)){
-            if (d[col.LOC_Y] < courtYDomain[1]) {
-                context.beginPath();
-                context.rect(scaleXLinear(d[col.LOC_X]), scaleYLinear(d[col.LOC_Y]), 1, 1);
-                context.fill();
-                context.closePath();
+        let canvasX = scaleXLinear(d[col.LOC_X] + (Math.random() * jitterStrength) - halfJitterStrength)
+        let canvasY = scaleYLinear(d[col.LOC_Y] + (Math.random() * jitterStrength) - halfJitterStrength)
+        if (d[col.LOC_Y] < courtYDomain[1]) {
+            attemptsContext.beginPath();
+            attemptsContext.rect(canvasX, canvasY, 1, 1);
+            attemptsContext.fill();
+            attemptsContext.closePath();
 
-                let x = scaleX(d[col.LOC_X]);
-                let y = scaleY(d[col.LOC_Y]);
-                attempts.raster[y][x] += 1;
-                pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
+            if(d[col.SHOT_MADE_FLAG]){
+                ptsContext.beginPath();
+                ptsContext.rect(canvasX, canvasY, 1, 1);
+                ptsContext.fill();
+                ptsContext.closePath();
             }
 
-            let dist = Math.floor(d[col.SHOT_DISTANCE]);
-            if (dist < 35) {
-                attempts.hist[dist] += 1;
-                pts.hist[dist] += d[col.SHOT_MADE_FLAG];
-            }
+            ratioContext.fillStyle = d[col.SHOT_MADE_FLAG] ?  shotMadeColor : shotMissedColor ;
+            ratioContext.beginPath();
+            ratioContext.rect(canvasX, canvasY, 1, 1);
+            ratioContext.fill();
+            ratioContext.closePath();
 
-            numPassedFilter += 1;
+            let x = scaleX(d[col.LOC_X]);
+            let y = scaleY(d[col.LOC_Y]);
+            attempts.raster[y][x] += 1;
+            pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
         }
-    });
+
+        let dist = Math.floor(d[col.SHOT_DISTANCE]);
+        if (dist < 35) {
+            attempts.hist[dist] += 1;
+            pts.hist[dist] += d[col.SHOT_MADE_FLAG];
+        }
+
+    })
+    numProcessed += slice.length;
     ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => attempts.raster[rowI][colI] != 0 ? pts.raster[rowI][colI] / attempts.raster[rowI][colI] : 0))
     blurRaster(ratio);
     ratio.hist = ratio.hist.map((_, i) => pts.hist[i] / attempts.hist[i])
@@ -335,12 +373,16 @@ function ready(compiled) {
         .tickValues([0, 5, 10, 15, 20, 25, 30, 35])
     histXAxisG.call(histXAxis);
 
+
+    invalidate();
     drawLoop();    
 }
 
 function invalidate() {
     currentIndex = 0
-    numPassedFilter = 0;
+    numProcessed = 0;
+    filtered = rows.filter(filterFunc);
+    numPassedFilter = filtered.length;
     emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
     emptyHist = function() {return new Array(35).fill(0);}
     scaleX.range([...Array(resolutionX).keys()])
@@ -367,12 +409,14 @@ function changeDisplayedStat(newStat) {
     drawCourt(chosenStat);
     drawHeatmapScale(chosenStat)
     drawHistogram(chosenStat)
+    d3.selectAll('canvas').style("opacity", 0)
+    chosenStat.canvas.style("opacity", 1)
 }
 
 var currentIndex = 0;
 function drawLoop(){
-    if (currentIndex < rows.length) {
-        processSlice(rows.slice(currentIndex, currentIndex + sliceSize));
+    if (currentIndex < numPassedFilter) {
+        processSlice(filtered.slice(currentIndex, currentIndex + sliceSize));
         currentIndex += sliceSize;
 
         drawProgressBar()
@@ -383,7 +427,7 @@ function drawLoop(){
 
         drawHistogram(chosenStat)
 
-        $('#num-passed-filter-span').text(d3.format(',')(numPassedFilter))
+        $('#num-passed-filter-span').text(d3.format(',')(numProcessed))
     }
    
     requestAnim(drawLoop);
@@ -507,16 +551,16 @@ function drawHistogram(stat) {
 }
 
 function drawProgressBar() {
-    if(currentIndex > rows.length) {
+    if(numProcessed >= numPassedFilter) {
         progressBarG.attr("visibility", "hidden")
     } else {
         progressBarG.attr("visibility", "visible")
         progressBarG.selectAll("rect")
-            .data([currentIndex])
+            .data([numProcessed])
             .join("rect")
             .attr("y", height - 5)
             .attr("x", 0)
-            .attr("width", (d) => (d / rows.length) * heatmapSize.width)
+            .attr("width", (d) => (d / numPassedFilter) * heatmapSize.width)
             .attr("height", 5)
             .attr("fill", "darkblue")
     }
@@ -531,24 +575,29 @@ function applyFilters(){
 
     setResolutionFactor(0.8);
     ratioCutoff = 50;
+    ratioOpacity = 0.1;
 
     if(filterSeasonHigh - filterSeasonLow < 5){
         setResolutionFactor(0.6);
-    }
-
-    if(filterCurrentTeam != null){
-        ratioCutoff = 35;
-        setResolutionFactor(0.45);
+        ratioOpacity = 0.2;
     }
 
     if (filterSeasonHigh - filterSeasonLow < 2){
+        ratioCutoff = 35;
+        setResolutionFactor(0.45);
+        ratioOpacity = 0.4
+    }
+
+    if(filterCurrentTeam != null){
         ratioCutoff = 25;
         setResolutionFactor(0.35);
+        ratioOpacity = 0.5;
     }
 
     if(filterCurrentPlayer != null){
         setResolutionFactor(0.2);
         ratioCutoff = 20;
+        ratioOpacity = 1.0;
     }
 
     filterFunc = makeFilter();
@@ -603,6 +652,9 @@ function handleHistogramMouseout(event, d) {
 }
 
 function handleCourtSquareMousover(event, d) {
+    if(mode == "discrete") {
+        return;
+    }
     let unit = chosenStat.unit;
     let format = chosenStat.format;
     if(chosenStat != ratio || attempts.raster.flat()[d.index] > ratioCutoff){
@@ -623,21 +675,45 @@ function handleCourtSquareMouseout(event, d) {
         .style("opacity", 0)
 }
 
+function setToHeatmap(){
+    mode = "heatmap"
+    d3.select('#canvases').style("opacity", 0);
+    courtG.style("opacity", 1);
+    heatmapScaleRootG.style("opacity", 1);
+}
+
+function setToDiscrete(){
+    mode = "discrete"
+    d3.select('#canvases').style("opacity", 1);
+    courtG.style("opacity", 0);
+    heatmapScaleRootG.style("opacity", 0);
+}
+
 $('#shots-taken').on('click', (e) => {changeDisplayedStat(attempts)})
 $('#shots-made').on('click', (e) => {changeDisplayedStat(pts)})
 $('#ratio').on('click', (e) => {changeDisplayedStat(ratio)})
 $('#clear-player').on('click', (e) => {clearPlayer()})
 $('#clear-team').on('click', (e) => {clearTeam()})
 $('#apply-filters').on('click', (e) => {applyFilters()})
+$('#heatmap-radio').on('click', (e) => {setToHeatmap()})
+$('#discrete-radio').on('click', (e) => {setToDiscrete()})
 //----------------------------------------------------------------------------------------------------------------------
 // Canvas Utils
 //----------------------------------------------------------------------------------------------------------------------
 function clearCanvas() {
     // clear canvas
-    context.fillStyle = "rgba(255, 255, 255, 0)";
-    // context.fillStyle = "#fff";
-    context.rect(0,0,chart.attr("width"),chart.attr("height"));
-    context.fill();
+    // context.fillStyle = "rgba(255, 255, 255, 0)";
+    attemptsContext.fillStyle = "#fff";
+    attemptsContext.rect(0,0,attemptsCanvas.attr("width"),attemptsCanvas.attr("height"));
+    attemptsContext.fill();
+    ptsContext.fillStyle = "#fff";
+    ptsContext.rect(0,0,ptsCanvas.attr("width"),ptsCanvas.attr("height"));
+    ptsContext.fill();
+    ratioContext.fillStyle = "#fff";
+    ratioContext.rect(0,0,ratioCanvas.attr("width"),ratioCanvas.attr("height"));
+    ratioContext.fill();
+
+
 }
 
 function drawCanvas() {
