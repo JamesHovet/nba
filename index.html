@@ -168,8 +168,6 @@
           <h1 style="text-align: center;">A&nbspDecade&nbspof Basketball&nbspShots</h1>
           <h5 style="text-align: center;">By James Hovet</h5>
 
-          <h3>Showing 2,000,183 of 2,000,183 Shots</h3>
-
           <div class="row">
             <div class="col"> 
               <input type="radio" class="btn-check" name="chosen-stat" id="shots-taken" autocomplete="off" checked>
@@ -186,8 +184,9 @@
               <label class="btn btn-outline-primary w-100" for="ratio">Shooting %</label>
             </div>
           </div>
-          <br>
-          <h3>Player:</h3>
+
+          <h3 style="text-align: center;">Displaying <span id="num-passed-filter-span">0</span> of 2,009,324 Shots</h3>
+          <h3>Filter by Player:</h3>
           <div class="row">
             <div id="player-search" class="col">
               <input class="typeahead" type="text" placeholder="Player Name">
@@ -197,7 +196,7 @@
               <img id="player-img">
             </div>
           </div>
-          <h3>Team:</h3>
+          <h3>Filter by Team:</h3>
           <div class="row">
             <div id="team-search" class="col">
               <input class="typeahead" type="text" placeholder="Team Name">

@@ -251,27 +251,30 @@ function clearTeam(){
 //----------------------------------------------------------------------------------------------------------------------
 // Parse new data
 //----------------------------------------------------------------------------------------------------------------------
-
+var numPassedFilter = 0;
 function processSlice(slice, filter) {
     context.fillStyle = "rgba(255, 0, 0, 1)";
     slice.forEach(d => {
-        if(d[col.LOC_Y] < courtYDomain[1] && filterFunc(d)){
+        if( filterFunc(d)){
+            if (d[col.LOC_Y] < courtYDomain[1]) {
+                context.beginPath();
+                context.rect(scaleXLinear(d[col.LOC_X]), scaleYLinear(d[col.LOC_Y]), 1, 1);
+                context.fill();
+                context.closePath();
 
-            context.beginPath();
-            context.rect(scaleXLinear(d[col.LOC_X]), scaleYLinear(d[col.LOC_Y]), 1, 1);
-            context.fill();
-            context.closePath();
+                let x = scaleX(d[col.LOC_X]);
+                let y = scaleY(d[col.LOC_Y]);
+                attempts.raster[y][x] += 1;
+                pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
+            }
 
-            let x = scaleX(d[col.LOC_X]);
-            let y = scaleY(d[col.LOC_Y]);
-            attempts.raster[y][x] += 1;
-            pts.raster[y][x] += d[col.SHOT_MADE_FLAG];
             let dist = Math.floor(d[col.SHOT_DISTANCE]);
             if (dist < 35) {
                 attempts.hist[dist] += 1;
                 pts.hist[dist] += d[col.SHOT_MADE_FLAG];
             }
 
+            numPassedFilter += 1;
         }
     });
     ratio.raster = ratio.raster.map((row, rowI) => row.map((el, colI) => attempts.raster[rowI][colI] != 0 ? pts.raster[rowI][colI] / attempts.raster[rowI][colI] : 0))
@@ -331,6 +334,7 @@ function ready(compiled) {
 
 function invalidate() {
     currentIndex = 0
+    numPassedFilter = 0;
     emptySquares = function() {return new Array(resolutionY).fill(0).map(() => new Array(resolutionX).fill(0))}
     emptyHist = function() {return new Array(35).fill(0);}
     scaleX.range([...Array(resolutionX).keys()])
@@ -372,6 +376,8 @@ function drawLoop(){
         drawHeatmapScale(chosenStat);
 
         drawHistogram(chosenStat)
+
+        $('#num-passed-filter-span').text(d3.format(',')(numPassedFilter))
     }
    
     requestAnim(drawLoop);
@@ -394,13 +400,13 @@ function drawCourt(stat) {
         .data(raster.flat().map((d, i) => {return {"val" : d, "index" : i};}))
         .join(
             enter => enter.append("rect")
+                .on("mouseover", handleCourtSquareMousover)
+                .on("mouseout", handleCourtSquareMouseout),
+            update => update
                 .attr("x", (d, i) => (i % resolutionX) * boxWidth )
                 .attr("y", (d, i) => Math.floor(i / resolutionX) * boxHeight )
                 .attr("width", boxWidth)
                 .attr("height", boxHeight)
-                .on("mouseover", handleCourtSquareMousover)
-                .on("mouseout", handleCourtSquareMouseout),
-            update => update
                 .call(update => update
                     .transition()
                     .duration(500)
@@ -512,6 +518,15 @@ function drawProgressBar() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function applyFilters(){
+
+    setResolutionFactor(1.0);
+    if(filterCurrentTeam != null){
+        setResolutionFactor(0.6);
+    }
+    if(filterCurrentPlayer != null){
+        setResolutionFactor(0.3);
+    }
+
     filterFunc = makeFilter();
     invalidate();
     filterIsUpToDate = true;
