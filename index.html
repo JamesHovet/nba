@@ -21,6 +21,7 @@
 
 .typeahead {
   background-color: #fff;
+  margin-bottom: 10px;
 }
 
 .typeahead:focus {
@@ -91,6 +92,10 @@
       left: 10px;
     }
 
+    h3 {
+      padding-top: 5px;
+    }
+
     table {
       table-layout: fixed;
       word-wrap: break-word;
@@ -103,7 +108,6 @@
     
     #menu-td {
       padding: 10px;
-      background-color: grey;
       vertical-align: initial;
       align-items: stretch;
     }
@@ -139,6 +143,11 @@
     #bk-svg {
       pointer-events: none;
     }
+
+    #team-display, #player-display {
+      padding-left: 0;
+      padding-right: 0;
+    }
 </style>
 </head>
 <body>
@@ -157,6 +166,9 @@
       <td id="menu-td">
         <div class="container">
           <h1 style="text-align: center;">A&nbspDecade&nbspof Basketball&nbspShots</h1>
+          <h5 style="text-align: center;">By James Hovet</h5>
+
+          <h3>Showing 2,000,183 of 2,000,183 Shots</h3>
 
           <div class="row">
             <div class="col"> 
@@ -175,19 +187,32 @@
             </div>
           </div>
           <br>
-          <div id="player-search">
-            <input class="typeahead" type="text" placeholder="Player Name">
+          <h3>Player:</h3>
+          <div class="row">
+            <div id="player-search" class="col">
+              <input class="typeahead" type="text" placeholder="Player Name">
+              <button id="clear-player" type="button" class="btn btn-danger w-100" hidden>Clear Player</button>
+            </div>
+            <div id="player-display" class="col-auto">
+              <img id="player-img">
+            </div>
           </div>
-          <div id="player-display">
-            <img id="player-img">
-          </div>
-          <div id="team-search">
-            <input class="typeahead" type="text" placeholder="Team Name">
-          </div>
-          <div id="team-display">
-            <img type="image/svg+xml" id="team-img">
+          <h3>Team:</h3>
+          <div class="row">
+            <div id="team-search" class="col">
+              <input class="typeahead" type="text" placeholder="Team Name">
+              <button id="clear-team" type="button" class="btn btn-danger w-100" hidden>Clear Team</button>
+            </div>
+            <div id="team-display" class="col-auto">
+              <img type="image/svg+xml" id="team-img">
+            </div>
           </div>
           <!-- https://jqueryui.com/slider/#range -->
+          <div class="row" id="apply-filters-row">
+            <div class="col"> 
+              <button class="btn w-100 btn-outline-danger" id="apply-filters" for="apply">Apply Filters</button>
+            </div>
+          </div>
         </div>
       </td>
     </tr>

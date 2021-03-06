@@ -199,7 +199,12 @@ for(i = 0; i < 35; i++) {
 // Filter
 //----------------------------------------------------------------------------------------------------------------------
 
-function doesPassFilter(d) {
+var filterIsUpToDate = true;
+
+var filterCurrentPlayer = null;
+var filterCurrentTeam = null;
+
+var filterFunc = (d) => {
     // return d[col.SEASON] == 2019;
     // return d[col.TEAM_ID] == 38;
     // return d[col.PLAYER_ID] == 2544; // lebron
@@ -208,6 +213,41 @@ function doesPassFilter(d) {
     return true;
 }
 
+function makeFilter() {
+    // TODO: if there's really nothing left, fix the behavior where you change a filter item, then change it back, but the filter is still invalid to the app
+    return function(d) {
+        if (filterCurrentPlayer != null && d[col.PLAYER_ID] != filterCurrentPlayer){
+            return false;
+        }
+        if(filterCurrentTeam != null && d[col.TEAM_ID] != filterCurrentTeam){
+            return false;
+        }
+        return true;
+    }
+}
+
+function invalidateFilter(){
+    filterIsUpToDate = false;
+    $('#apply-filters').removeClass('btn-outline-danger').addClass('btn-danger').blur()
+}
+
+function clearPlayer(){
+    filterCurrentPlayer = null;
+    $('#clear-player').attr("hidden", true)
+    $("#player-img").attr("src", "");
+    player_search_typeahead.typeahead('val', '');
+    invalidateFilter();
+}
+
+function clearTeam(){
+    filterCurrentTeam = null;
+    $('#clear-team').attr("hidden", true)
+    $("#team-img").attr("src", "").attr("width", 0);
+    team_search_typeahead.typeahead('val', '');
+    invalidateFilter();
+}
+
+
 //----------------------------------------------------------------------------------------------------------------------
 // Parse new data
 //----------------------------------------------------------------------------------------------------------------------
@@ -215,7 +255,7 @@ function doesPassFilter(d) {
 function processSlice(slice, filter) {
     context.fillStyle = "rgba(255, 0, 0, 1)";
     slice.forEach(d => {
-        if(d[col.LOC_Y] < courtYDomain[1] && doesPassFilter(d)){
+        if(d[col.LOC_Y] < courtYDomain[1] && filterFunc(d)){
 
             context.beginPath();
             context.rect(scaleXLinear(d[col.LOC_X]), scaleYLinear(d[col.LOC_Y]), 1, 1);
@@ -304,7 +344,12 @@ function invalidate() {
     ratio.raster = emptySquares();
     ratio.hist = emptyHist();
     clearCanvas()
-    courtG.selectAll("rect").data([]).join("rect")
+    histBarsG.selectAll('rect')
+        .transition()
+        .duration(100)
+        .attr("height", 0)
+        .attr("y", histY(0))
+    courtG.selectAll("rect").attr("fill", "white")
 }
 
 function changeDisplayedStat(newStat) {
@@ -466,8 +511,16 @@ function drawProgressBar() {
 // Event handlers
 //----------------------------------------------------------------------------------------------------------------------
 
-var lastActiveRing = 0
+function applyFilters(){
+    filterFunc = makeFilter();
+    invalidate();
+    filterIsUpToDate = true;
+    $('#apply-filters').removeClass('btn-danger').addClass('btn-outline-danger').blur()
+    $('clear-player').attr("hidden", true)
+    $('clear-team').attr("hidden", true)
+}
 
+var lastActiveRing = 0
 var barPriorColor = undefined;
 function handleHistogramMouseover(event, d, i) {
     let unit = chosenStat.unit;
@@ -534,6 +587,9 @@ function handleCourtSquareMouseout(event, d) {
 $('#shots-taken').on('click', (e) => {changeDisplayedStat(attempts)})
 $('#shots-made').on('click', (e) => {changeDisplayedStat(pts)})
 $('#ratio').on('click', (e) => {changeDisplayedStat(ratio)})
+$('#clear-player').on('click', (e) => {clearPlayer()})
+$('#clear-team').on('click', (e) => {clearTeam()})
+$('#apply-filters').on('click', (e) => {applyFilters()})
 //----------------------------------------------------------------------------------------------------------------------
 // Canvas Utils
 //----------------------------------------------------------------------------------------------------------------------
@@ -631,8 +687,9 @@ var substringMatcherTeams = function(teamDict) {
 };
 
 
+var player_search_typeahead = $('#player-search .typeahead');
+var team_search_typeahead = $('#team-search .typeahead');
 function initializeTypeaheads(){
-    var team_search_typeahead = $('#team-search .typeahead');
     team_search_typeahead.typeahead({
         hint: true,
         highlight: true,
@@ -645,11 +702,15 @@ function initializeTypeaheads(){
     });
     
     team_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
-        let info = teams[+suggestion];
-        $("#team-img").attr("src", `https://www.nba.com/stats/media/img/teams/logos/${info["abbrev"]}_logo.svg`)
+        if(suggestion != filterCurrentTeam){
+            filterCurrentTeam = suggestion;
+            invalidateFilter();
+            $('#clear-team').attr('hidden', false);
+            let info = teams[+suggestion];
+            $("#team-img").attr("src", `https://www.nba.com/stats/media/img/teams/logos/${info["abbrev"]}_logo.svg`).attr('width', 260) // match player
+        }
     });
     
-    var player_search_typeahead = $('#player-search .typeahead');
         player_search_typeahead.typeahead({
         hint: true,
         highlight: true,
@@ -662,7 +723,12 @@ function initializeTypeaheads(){
     });
 
     player_search_typeahead.bind('typeahead:select', function(ev, suggestion) {
-        $("#player-img").attr("src", `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${suggestion.id}.png`)
+        if (suggestion.id != filterCurrentPlayer) {
+            filterCurrentPlayer = suggestion.id;
+            invalidateFilter();
+            $('#clear-player').attr('hidden', false);
+            $("#player-img").attr("src", `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${suggestion.id}.png`)
+        }
     });
 
 }
