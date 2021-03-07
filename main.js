@@ -455,10 +455,11 @@ function drawCourt(stat) {
     let attemptsRasterFlat = attempts.raster.flat();
     if (chosenStat == ratio) {
         quantiles = d3.scaleSequentialQuantile().domain(raster.flat().filter((d, i) => attemptsRasterFlat[i] > ratioCutoff)).quantiles(numQuantiles)
+        scaleHeatmap = d3.scaleQuantize().domain([0.25, 0.4]).range(pyRange(0, 1, 1 / numQuantiles).map(d3.interpolateBlues))
     } else {
         quantiles = d3.scaleSequentialQuantile().domain(raster.flat().filter((d, i) => d != 0)).quantiles(numQuantiles)
+        scaleHeatmap = d3.scaleSequentialQuantile(quantiles, d3.interpolateBlues);
     }
-    scaleHeatmap = d3.scaleSequentialQuantile(quantiles, d3.interpolateBlues);
     courtG.selectAll("rect")
         .data(raster.flat().map((d, i) => {return {"val" : d, "index" : i};}))
         .join(
@@ -490,36 +491,49 @@ function drawLegends(stat) {
     heatmapScaleLabel.text(chosenStat.name);
     histYAxisLabel.text(chosenStat.name);
     let widthAdjust = chosenStat == ratio ? -100 : 0
+    
+    let data;
+    let range;
+    if(chosenStat == ratio) {
+        range = scaleHeatmap.domain()
+        data = pyRange(range[0], range[1], (range[1] - range[0]) / (numQuantiles - 1))
+        data = data.map((el) => el + ((range[1] - range[0]) / numQuantiles))
+        // data.push(range[1])
+    } else {
+        data = quantiles;
+    }
+
     heatmapScaleG.selectAll("rect")
-        .data(quantiles)
+        .data(data)
         .join(
             enter => enter.append("rect")
                 .attr("height", 15)
                 .attr("y", 0)
                 .attr("stroke", "black"),
             update =>  update
-                .attr("x", (d, i) => (i) * (heatmapScaleSize.width + widthAdjust) / quantiles.length)
-                .attr("width", (heatmapScaleSize.width + widthAdjust) / quantiles.length)
-                .attr("fill", (d, i) => scaleHeatmap.range()[quantiles.length - i - 1])
+                .attr("x", (d, i) => (i) * (heatmapScaleSize.width + widthAdjust) / data.length)
+                .attr("width", (heatmapScaleSize.width + widthAdjust) / data.length)
+                .attr("fill", (d, i) => scaleHeatmap.range()[data.length - i - 1])
                 .select("text")
         )
 
+
     heatmapScaleG.selectAll("text")
-        .data(quantiles)
+        .data(data)
         .join(
             enter => enter.append("text")
                 .attr("class", "legend_text"),
             update => update
-                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / quantiles.length) + 15}, 25) rotate(20)`)
+                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / data.length) + 15}, 25) rotate(20)`)
                 .text((d, i) => {
                     if(chosenStat == ratio) {
-                        return d3.format(",.3r")(quantiles[quantiles.length - i - 1]).substring(1)
+                        return d3.format(",.3r")(isNaN(data[data.length - i - 1]) ? range[1] : data[data.length - i - 1]).substring(1)
                         + "-"  
-                        + d3.format(",.3r")(NaNToZero(quantiles[quantiles.length - i - 2])).substring(1)
+                        + d3.format(",.3r")(NaNToZero(data[data.length - i - 2])).substring(1)
                     } else {
-                        return d3.format(",.2r")(quantiles[quantiles.length - i - 1])
+                        return d3.format(",.2r")(data[data.length - i - 1])
                         + "-"  
-                        + d3.format(",.2r")(NaNToZero(quantiles[quantiles.length - i - 2]))
+                        + d3.format(",.2r")(NaNToZero(data[data.length - i - 2]))
                     }
                 })
         )
