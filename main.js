@@ -271,7 +271,7 @@ function invalidateFilter(){
 function clearPlayer(){
     filterCurrentPlayer = null;
     $('#clear-player').attr("hidden", true)
-    $("#player-img").attr("src", "");
+    $("#player-img").attr("src", "").attr("width", 0);
     player_search_typeahead.typeahead('val', '');
     invalidateFilter();
 }
