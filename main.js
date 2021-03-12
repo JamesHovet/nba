@@ -513,7 +513,8 @@ function drawLegends(stat) {
             update =>  update
                 .attr("x", (d, i) => (i) * (heatmapScaleSize.width + widthAdjust) / data.length)
                 .attr("width", (heatmapScaleSize.width + widthAdjust) / data.length)
-                .attr("fill", (d, i) => scaleHeatmap.range()[data.length - i - 1])
+                // .attr("fill", (d, i) => scaleHeatmap.range()[data.length - i - 1])
+                .attr("fill", (d, i) => scaleHeatmap.range()[i])
                 .select("text")
         )
 
@@ -524,16 +525,16 @@ function drawLegends(stat) {
             enter => enter.append("text")
                 .attr("class", "legend_text"),
             update => update
-                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / data.length) + 15}, 25) rotate(20)`)
+                .attr("transform", (d, i) => `translate(${(i * (heatmapScaleSize.width + widthAdjust) / data.length) + 10}, 25) rotate(50)`)
                 .text((d, i) => {
                     if(chosenStat == ratio) {
-                        return d3.format(",.3r")(isNaN(data[data.length - i - 1]) ? range[1] : data[data.length - i - 1]).substring(1)
+                        return d3.format(",.3r")(isNaN(data[i - 1]) ? .25 : data[i - 1]).substring(1)
                         + "-"  
-                        + d3.format(",.3r")(NaNToZero(data[data.length - i - 2])).substring(1)
+                        + d3.format(",.3r")(NaNToZero(data[i])).substring(1)
                     } else {
-                        return d3.format(",.2r")(data[data.length - i - 1])
+                        return d3.format(",.2r")(NaNToZero(data[i - 1]))
                         + "-"  
-                        + d3.format(",.2r")(NaNToZero(data[data.length - i - 2]))
+                        + d3.format(",.2r")(NaNToZero(data[i]))
                     }
                 })
         )
